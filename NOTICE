@@ -1,0 +1,14 @@
+Medicina Consulta Open is a clean, focused successor to the educational
+Medicina Consulta projects by Martin Lofrano de Oliveira:
+
+https://github.com/martinlofranodeoliveira/medicinaconsulta
+https://github.com/martinlofranodeoliveira/medicina-consulta
+
+The earlier Node project declared the ISC license in package.json. This
+release retains that license and attribution. Its scheduling API and tests
+are a new implementation. It contains no original accounts, contact forms,
+passwords, SMTP settings, logs, uploaded avatars, commercial logos, stock
+photos, payment forms, or Git history. The Ionic starter is not included.
+
+Node.js is a separate runtime, distributed under its own license:
+https://github.com/nodejs/node/blob/main/LICENSE

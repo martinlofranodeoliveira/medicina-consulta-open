@@ -1,0 +1,16 @@
+{
+  "name": "medicina-consulta-open",
+  "version": "0.1.0",
+  "description": "API local de agenda de consultas, com exemplos sintéticos e sem dependências externas",
+  "type": "module",
+  "private": false,
+  "license": "ISC",
+  "engines": { "node": ">=22.22.0" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --test",
+    "demo": "node scripts/demo.js"
+  }
+}
