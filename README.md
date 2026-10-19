@@ -1,6 +1,6 @@
 # Medicina Consulta Open
 
-Uma API local para estudar e prototipar **agendamento de consultas**: catálogo de profissionais fictícios, criação de horários, prevenção de conflitos, conclusão, cancelamento e exclusão. Código aberto sob a licença ISC.
+Uma API local para estudar e prototipar **agendamento de consultas**: catálogo de profissionais fictícios, criação e reagendamento de horários, prevenção de conflitos, conclusão, cancelamento e exclusão. Código aberto sob a licença ISC.
 
 Esta versão reorganiza a ideia do projeto educacional Medicina Consulta em uma base pequena e executável. O servidor usa apenas módulos nativos do Node.js; não exige banco externo, conta em nuvem nem `npm install`.
 
@@ -40,12 +40,17 @@ A resposta `201` contém `data.id`, usado nas próximas chamadas. O horário é 
 
 ```sh
 curl 'http://127.0.0.1:3334/api/appointments?date=2030-04-08&practitionerId=demo-clinica-geral'
+curl -X POST http://127.0.0.1:3334/api/appointments/ID_DA_RESPOSTA/reschedule \
+  -H 'Content-Type: application/json' \
+  -d '{"startsAt":"2030-04-08T10:00:00-03:00","durationMinutes":45}'
 curl -X PATCH http://127.0.0.1:3334/api/appointments/ID_DA_RESPOSTA \
   -H 'Content-Type: application/json' -d '{"status":"cancelled"}'
 curl -X DELETE http://127.0.0.1:3334/api/appointments/ID_DA_RESPOSTA
 ```
 
-O cancelamento libera o intervalo. `completed` mantém o horário ocupado. Somente consultas `scheduled` podem mudar de estado; para reagendar, cancele e crie outra. A exclusão remove o registro por completo, sem trilha de auditoria.
+O reagendamento retorna `200` com a consulta atualizada e aceita somente `startsAt` e `durationMinutes`, ambos obrigatórios. Mantém o mesmo ID, profissional, referência fictícia, estado e data de criação. Somente consultas `scheduled` podem ser reagendadas. A própria consulta não conflita com seu horário anterior: é possível mover ou ampliar um intervalo que ainda se sobreponha a ele. Conflitos com outras consultas retornam `409 schedule_conflict`; entrada inválida ou falha de gravação também preserva o horário anterior. Criação e reagendamento usam a mesma fila para impedir que requisições concorrentes ocupem o mesmo intervalo.
+
+O cancelamento libera o intervalo. `completed` mantém o horário ocupado. Somente consultas `scheduled` podem mudar de estado; reagendar uma consulta concluída ou cancelada retorna `409 invalid_transition`. A exclusão remove o registro por completo, sem trilha de auditoria.
 
 ## Rotas e validação
 
@@ -56,10 +61,11 @@ O cancelamento libera o intervalo. `completed` mantém o horário ocupado. Somen
 | GET | `/api/practitioners` | Catálogo fictício |
 | GET | `/api/appointments` | Agenda ordenada; filtros `date` e `practitionerId` |
 | POST | `/api/appointments` | Cria um agendamento |
+| POST | `/api/appointments/:id/reschedule` | Reagenda uma consulta `scheduled`, preservando sua identidade |
 | PATCH | `/api/appointments/:id` | Conclui ou cancela |
 | DELETE | `/api/appointments/:id` | Remove um agendamento |
 
-- `startsAt` exige fuso explícito (`Z` ou `±HH:MM`), segundos iguais a zero e horários em intervalos de 15 minutos.
+- `startsAt` exige fuso explícito (`Z` ou `±HH:MM`), segundos iguais a zero e horários em intervalos de 15 minutos, tanto no horário informado quanto após normalização em UTC. Fusos de meia hora e 45 minutos são aceitos; offsets como `+03:07` são recusados, pois deslocariam o horário salvo para fora da grade.
 - `durationMinutes`: inteiro, múltiplo de 15, de 15 a 120.
 - `date` filtra o **dia UTC**, não o dia no fuso do computador. Ex.: `23:00-03:00` pertence ao dia seguinte em UTC.
 - Erros: `400` entrada inválida, `403` origem/host recusado, `404` recurso não encontrado, `409` conflito, `413` corpo acima de 8 KiB, `415` tipo de conteúdo incorreto e `500` falha interna.
@@ -81,7 +87,7 @@ npm run dev
 npm run check
 ```
 
-Os testes cobrem conflitos de intervalo e concorrência, transições, persistência após reiniciar, falha de disco, JSON inválido, limite de corpo e proteção de host/origem. Usam somente referências fictícias e pastas temporárias. Não é necessário gerar um build.
+Os testes cobrem conflitos de intervalo e concorrência entre criação e reagendamento, preservação da identidade e do horário anterior, transições, persistência após reiniciar, falha de disco, JSON inválido, limite de corpo e proteção de host/origem. Usam somente referências fictícias e pastas temporárias. Não é necessário gerar um build.
 
 Veja [CONTRIBUTING.md](CONTRIBUTING.md), [ROADMAP.md](ROADMAP.md), [SECURITY.md](SECURITY.md) e [NOTICE](NOTICE). Não inclua cadastros, segredos, bancos, avatares ou arquivos de produção em contribuições.
 

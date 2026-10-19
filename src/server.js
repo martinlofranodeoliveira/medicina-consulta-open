@@ -69,6 +69,10 @@ export function createApplication(store) {
         }
         if (request.method === 'POST') return json(response, 201, { data: await appointments.create(await jsonBody(request)) });
       }
+      const reschedule = path.match(/^\/api\/appointments\/([a-f0-9-]{36})\/reschedule$/);
+      if (reschedule && request.method === 'POST') {
+        return json(response, 200, { data: await appointments.reschedule(reschedule[1], await jsonBody(request)) });
+      }
       const match = path.match(/^\/api\/appointments\/([a-f0-9-]{36})$/);
       if (match && request.method === 'PATCH') {
         return json(response, 200, { data: await appointments.status(match[1], await jsonBody(request)) });

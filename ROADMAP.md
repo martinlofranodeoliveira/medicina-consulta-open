@@ -6,7 +6,7 @@ O foco atual é uma API de agendamento reproduzível, com dados sintéticos. Cad
 - [ ] Cadastro configurável de profissionais fictícios, validado e separado dos agendamentos.
 - [ ] Intervalos de disponibilidade e bloqueios de agenda, com testes de conflito.
 - [ ] Filtro por dia no fuso IANA solicitado, inclusive em mudanças de horário de verão.
-- [ ] Reagendamento atômico que preserve o horário anterior quando houver conflito.
+- [x] Reagendamento atômico que preserve o horário anterior quando houver conflito, entrada inválida ou falha de persistência, com testes de concorrência.
 - [ ] Exportação de eventos iCalendar sem dados identificáveis.
 - [ ] Interface acessível para operar a agenda de demonstração.
 - [ ] Avaliar SQLite e migrações para substituir o armazenamento JSON.

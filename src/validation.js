@@ -34,6 +34,9 @@ export function appointmentInput(value) {
   const hour = Number(value.startsAt.slice(11, 13));
   const minute = Number(value.startsAt.slice(14, 16));
   if (hour > 23 || minute > 59 || minute % 15 !== 0) bad('Use horários em intervalos de 15 minutos.');
+  if (startsAt.valueOf() % (15 * 60_000) !== 0) {
+    bad('O fuso deve preservar os intervalos de 15 minutos também em UTC.');
+  }
   if (!Number.isInteger(value.durationMinutes) || value.durationMinutes < 15 ||
       value.durationMinutes > 120 || value.durationMinutes % 15 !== 0) {
     bad('durationMinutes deve ser múltiplo de 15, entre 15 e 120.');

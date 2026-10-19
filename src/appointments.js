@@ -37,6 +37,28 @@ export class AppointmentService {
     });
   }
 
+  reschedule(id, body) {
+    objectWithFields(body, ['startsAt', 'durationMinutes']);
+    return this.store.mutate((appointments) => {
+      const item = appointments.find((entry) => entry.id === id);
+      if (!item) throw new ApiError(404, 'appointment_not_found', 'Consulta não encontrada.');
+      if (item.status !== 'scheduled') throw new ApiError(409, 'invalid_transition', 'A consulta já foi finalizada ou cancelada.');
+      const input = appointmentInput({
+        practitionerId: item.practitionerId,
+        patientRef: item.patientRef,
+        startsAt: body.startsAt,
+        durationMinutes: body.durationMinutes,
+      });
+      const conflict = appointments.some((entry) => entry.id !== item.id && entry.status !== 'cancelled' &&
+        entry.practitionerId === item.practitionerId &&
+        Date.parse(input.startsAt) < end(entry) && Date.parse(entry.startsAt) < end(input));
+      if (conflict) throw new ApiError(409, 'schedule_conflict', 'Esse profissional já tem uma consulta nesse intervalo.');
+      item.startsAt = input.startsAt;
+      item.durationMinutes = input.durationMinutes;
+      return item;
+    });
+  }
+
   status(id, body) {
     objectWithFields(body, ['status']);
     if (!['completed', 'cancelled'].includes(body.status)) {
