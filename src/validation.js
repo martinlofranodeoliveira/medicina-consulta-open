@@ -31,6 +31,9 @@ export function appointmentInput(value) {
   validDate(value.startsAt.slice(0, 10));
   const startsAt = new Date(value.startsAt);
   if (Number.isNaN(startsAt.valueOf())) bad('startsAt contém um horário ou fuso inválido.');
+  // A persisted UTC timestamp must remain valid input when the store reopens.
+  const utcYear = startsAt.getUTCFullYear();
+  if (utcYear < 0 || utcYear > 9999) bad('O início em UTC deve manter o ano entre 0000 e 9999.');
   const hour = Number(value.startsAt.slice(11, 13));
   const minute = Number(value.startsAt.slice(14, 16));
   if (hour > 23 || minute > 59 || minute % 15 !== 0) bad('Use horários em intervalos de 15 minutos.');
