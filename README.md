@@ -98,3 +98,33 @@ Veja [CONTRIBUTING.md](CONTRIBUTING.md), [ROADMAP.md](ROADMAP.md), [SECURITY.md]
 O repositório Node anterior declarava ISC. Esta edição preserva a licença e a autoria de Martin Lofrano de Oliveira. Código de contas, pagamentos, envio de e-mail, dados e imagens da versão antiga foi excluído; esta API é uma implementação nova do fluxo de agenda. O histórico antigo não é necessário para executar ou contribuir. A licença permite baixar, modificar e redistribuir o código, inclusive comercialmente, preservando os avisos.
 
 Documentação do runtime: [HTTP](https://nodejs.org/docs/latest-v22.x/api/http.html), [test runner](https://nodejs.org/docs/latest-v22.x/api/test.html), [filesystem](https://nodejs.org/docs/latest-v22.x/api/fs.html).
+
+## Descrição OpenAPI da agenda local
+
+A descrição OpenAPI é apenas descritiva e não cria rota HTTP nem valida sozinha. Ela espelha as oito operações atuais: `GET /`, `GET /health`, `GET /api/practitioners`, `GET /api/appointments`, `POST /api/appointments`, `PATCH /api/appointments/:id`, `DELETE /api/appointments/:id` e `POST /api/appointments/:id/reschedule`. Não há rota HTTP de disponibilidade.
+
+Exporte o documento sintético para a saída padrão:
+
+```sh
+node --input-type=module -e "import { createOpenApiDocument } from './src/openapi.js'; console.log(JSON.stringify(createOpenApiDocument(), null, 2))" > openapi.json
+```
+
+Ou em código:
+
+```js
+import { createOpenApiDocument } from './src/openapi.js';
+console.log(JSON.stringify(createOpenApiDocument(), null, 2));
+```
+
+O endereço padrão é o loopback `http://127.0.0.1:3334`. O servidor escuta exclusivamente em `127.0.0.1` na porta local padrão `3334`; não o exponha por proxy ou túnel.
+
+- Corpos são somente JSON (`Content-Type: application/json`) com limite de 8 KiB (8192 bytes, `x-body-limit-bytes: 8192`). Acima disso retorna `413 body_too_large`; tipo incorreto retorna `415 json_required`.
+- O filtro `date=AAAA-MM-DD` filtra o dia UTC (`startsAt` normalizado em UTC), não o dia no fuso do computador. `practitionerId` filtra pelo ID do catálogo (`demo-*`). Filtros desconhecidos retornam `400 validation_error`.
+- `startsAt` exige data de calendário válida, fuso explícito (`Z` ou `±HH:MM`), segundos zero e grade de 15 minutos tanto no horário informado quanto após normalização em UTC. Fusos como `+03:07` são recusados por deslocarem o horário salvo para fora da grade. A data informada e o início normalizado em UTC devem manter o ano entre `0000` e `9999`. A regex sozinha não garante essas regras semânticas.
+- `durationMinutes` é inteiro múltiplo de 15, de 15 a 120.
+- Intervalos adjacentes são permitidos; sobreposição para o mesmo profissional retorna `409 schedule_conflict`.
+- `completed` mantém o horário ocupado; `cancelled` libera o intervalo para novo agendamento.
+- Somente consultas `scheduled` podem ser reagendadas ou ter o estado alterado para `completed`/`cancelled`; caso contrário retorna `409 invalid_transition`.
+- O reagendamento aceita somente `startsAt` e `durationMinutes`, preserva a identidade (mesmo `id`, profissional, referência fictícia, estado e data de criação) e preserva o intervalo antigo em caso de conflito, entrada inválida ou falha de gravação.
+
+Os testes descritivos de esquema/contrato em `test/openapi.test.js` verificam apenas um subconjunto da estrutura, referências locais, esquemas e ilustrações sintéticas. Eles não são um validador completo de conformidade OAS, nem segurança automática, nem prontidão real de disponibilidade/clínica, nem permissão para expor o servidor. Use somente dados sintéticos (ex.: `synthetic_001`).
