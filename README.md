@@ -71,7 +71,8 @@ O cancelamento libera o intervalo. `completed` mantém o horário ocupado. Somen
 - `date` filtra o **dia UTC**, não o dia no fuso do computador. Ex.: `23:00-03:00` pertence ao dia seguinte em UTC.
 - Erros: `400` entrada inválida, `403` origem/host recusado, `404` recurso não encontrado, `409` conflito, `413` corpo acima de 8 KiB, `415` tipo de conteúdo incorreto e `500` falha interna.
 - Formato de erro: `{"error":{"code":"schedule_conflict","message":"…"}}`.
-- Não há agenda de disponibilidade, horários de expediente, feriados, lembretes ou cobrança. Agendamentos em datas passadas são aceitos para facilitar exemplos.
+- Não há agenda de disponibilidade no servidor, horários de expediente, feriados, lembretes ou cobrança. Agendamentos em datas passadas são aceitos para facilitar exemplos.
+- Enumeração em memória: `availableSlots({ windowStart, windowEnd, durationMinutes, appointments })` (em `src/availability.js`) lista inícios UTC livres em grade de 15 minutos a partir de uma lista sintética já filtrada pelo chamador para o profissional certo. Não consulta o servidor, não persiste dados e ignora `cancelled`, mantendo `scheduled`/`completed` como ocupados; adjacência é permitida.
 
 ## Dados locais e recuperação
 
