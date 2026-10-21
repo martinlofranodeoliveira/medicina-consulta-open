@@ -391,3 +391,91 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_appointment_status_audit.test.js`.
+
+
+<!-- community-core:schedule-conflict-audit -->
+### Check synthetic scheduling conflict offline
+
+Helps local synthetic scheduling study by checking a single fictional interval against stored synthetic appointments offline without server or storage. It mirrors creation and reschedule conflict rules where cancelled frees the interval and adjacency is allowed, complements UTC free-slot enumeration, catalog audit and status checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/schedule_conflict_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. Input payload must be a plain object with only keys practitionerId, candidate and appointments. Null, array or non-object payload is invalid. Extra payload keys make payload invalid. practitionerId must be a string length 6..64 starting with demo- containing only ASCII letters, digits, hyphen and underscore. candidate must be a plain object with only keys startsAt and durationMinutes, both required. startsAt must be a string length 24 of exact form YYYY-MM-DDTHH:MM:00.000Z with literal hyphens, T, colons, dot and Z at fixed positions; year 0000..9999, month 01..12, day valid for month including leap-year February with 29 days when year divisible by 400 or divisible by 4 and not by 100 else 28 days, hour 00..23, minute 00 or 15 or 30 or 45, seconds 00 and millis 000. durationMinutes must be an integer number 15..120 multiple of 15. appointments must be an array of 0..200 entries. Each entry must be a plain object with only keys id, practitionerId, startsAt, durationMinutes and status, all required. id must be a string length 1..64 containing only ASCII letters, digits, hyphen and underscore. Entry practitionerId follows the same demo- rule. Entry startsAt and durationMinutes follow the same candidate rules. status must be a string equal to scheduled, completed or cancelled. Missing keys, extra keys, wrong types or any field rule violation makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid schedule conflict check."}} with no partial result. Otherwise it considers only entries where entry practitionerId equals payload practitionerId and status is scheduled or completed, ignoring cancelled and other practitioners. It converts each UTC start to an absolute minute count using calendar arithmetic with month lengths and leap-year rule and computes end as start plus durationMinutes. Candidate conflicts when candidateStart < entryEnd and entryStart < candidateEnd; adjacency where end equals start is not a conflict. When any considered entry conflicts it returns {ok:true,conflict:true,code:"schedule_conflict",practitionerId} echoing payload practitionerId. Otherwise it returns {ok:true,conflict:false,code:"ok",practitionerId}. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "durationMinutes": 30,
+        "id": "a1",
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T12:30:00.000Z",
+        "status": "scheduled"
+      }
+    ],
+    "candidate": {
+      "durationMinutes": 30,
+      "startsAt": "2030-04-08T12:00:00.000Z"
+    },
+    "practitionerId": "demo-clinica-geral"
+  },
+  "output": {
+    "code": "ok",
+    "conflict": false,
+    "ok": true,
+    "practitionerId": "demo-clinica-geral"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "durationMinutes": 30,
+        "id": "a1",
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T12:15:00.000Z",
+        "status": "scheduled"
+      }
+    ],
+    "candidate": {
+      "durationMinutes": 30,
+      "startsAt": "2030-04-08T12:00:00.000Z"
+    },
+    "practitionerId": "demo-clinica-geral"
+  },
+  "output": {
+    "code": "schedule_conflict",
+    "conflict": true,
+    "ok": true,
+    "practitionerId": "demo-clinica-geral"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [],
+    "candidate": {
+      "durationMinutes": 30,
+      "startsAt": "2030-04-08T12:00:00.000Z"
+    },
+    "practitionerId": "prod-cardio"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid schedule conflict check."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_schedule_conflict_audit.test.js`.
