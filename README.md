@@ -325,3 +325,69 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_utc_day_agenda_filter.test.js`.
+
+
+<!-- community-core:appointment-status-audit -->
+### Validate synthetic appointment status transition offline
+
+Helps local synthetic scheduling study by validating fictional appointment status changes offline without server or storage. It mirrors PATCH rules where only scheduled can move to completed or cancelled, complements UTC-day filtering, free-slot enumeration and catalog audit without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/appointment_status_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. Input payload must be a plain object with only keys currentStatus and nextStatus, both required. Null, array, or non-object payload is invalid. Extra payload keys, missing keys, or wrong types make payload invalid. currentStatus must be a string equal to scheduled, completed or cancelled. nextStatus must be a string equal to completed or cancelled. Any enum violation makes payload invalid. On any invalid payload it returns {error:{code:"validation_error",message:"invalid status transition."},ok:false} with no partial result. Otherwise when currentStatus is not scheduled it returns {allowed:false,code:"invalid_transition",currentStatus,error:{code:"invalid_transition",message:"appointment already finalized."},nextStatus,ok:false} echoing inputs. Otherwise when currentStatus is scheduled and nextStatus is completed or cancelled it returns {allowed:true,code:"ok",currentStatus,nextStatus,ok:true} echoing inputs. It preserves input without mutation. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "currentStatus": "scheduled",
+    "nextStatus": "completed"
+  },
+  "output": {
+    "allowed": true,
+    "code": "ok",
+    "currentStatus": "scheduled",
+    "nextStatus": "completed",
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "currentStatus": "completed",
+    "nextStatus": "cancelled"
+  },
+  "output": {
+    "allowed": false,
+    "code": "invalid_transition",
+    "currentStatus": "completed",
+    "error": {
+      "code": "invalid_transition",
+      "message": "appointment already finalized."
+    },
+    "nextStatus": "cancelled",
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "currentStatus": "scheduled",
+    "nextStatus": "scheduled"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid status transition."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_appointment_status_audit.test.js`.
