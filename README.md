@@ -613,3 +613,62 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_availability_window_audit.test.js`.
+
+
+<!-- community-core:reschedule-request-audit -->
+### Validate synthetic reschedule request offline
+
+Helps local synthetic scheduling study by validating a fictional reschedule payload offline without server or storage. It supports the roadmap item for atomic reschedule with identity preservation, complements UTC free-slot enumeration, draft validation, conflict checks, catalog and status audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/reschedule_request_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys startsAt and durationMinutes, both required. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. startsAt must be a string length 24 of exact form YYYY-MM-DDTHH:MM:00.000Z with literal hyphens, T, colons, dot and Z at fixed positions and ASCII digits elsewhere; year 0000 to 9999, month 01 to 12, day valid for month including leap-year February with 29 days when year divisible by 400 or divisible by 4 and not by 100 else 28 days, hour 00 to 23, minute 00 or 15 or 30 or 45, seconds 00 and millis 000. durationMinutes must be an integer number 15 to 120 multiple of 15. Any missing key, extra key, wrong type or field, calendar or grid violation makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid reschedule request."}} with no partial result. Otherwise it returns {ok:true,startsAt,durationMinutes} with new string copies and same number. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "durationMinutes": 45,
+    "startsAt": "2030-04-08T12:00:00.000Z"
+  },
+  "output": {
+    "durationMinutes": 45,
+    "ok": true,
+    "startsAt": "2030-04-08T12:00:00.000Z"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "durationMinutes": 30,
+    "startsAt": "2030-04-08T12:07:00.000Z"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid reschedule request."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "startsAt": "2030-04-08T12:00:00.000Z"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid reschedule request."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_reschedule_request_audit.test.js`.
