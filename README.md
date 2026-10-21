@@ -1035,3 +1035,80 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_json_body_gate_audit.test.js`.
+
+
+<!-- community-core:host-origin-gate-audit -->
+### Audit synthetic host and origin gate offline
+
+Helps local synthetic scheduling study by checking fictional loopback host and origin gating offline without server or storage. It supports the loopback-only and 403 host and origin rules, complements UTC free-slot enumeration, conflict checks, draft, catalog, status, window, day-filter, reschedule, capacity and deletion audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/host_origin_gate_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys host and origin, both required. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. host must be a string length 1..128. origin must be a string length 0..256 with empty meaning absent. Any missing key, extra key, wrong type or length violation makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid host gate request."}} with no partial result. Otherwise it checks loopback allowlists using Map get/set: allowed hosts are exactly "127.0.0.1:3334" and "localhost:3334"; allowed origins are exactly "", "http://127.0.0.1:3334" and "http://localhost:3334". If host is not allowed it returns {ok:true,allowed:false,reason:"host_rejected",host,origin}. Else if origin is not allowed it returns {ok:true,allowed:false,reason:"origin_rejected",host,origin}. Else it returns {ok:true,allowed:true,reason:"loopback",host,origin}, where host and origin are new string copies. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "host": "127.0.0.1:3334",
+    "origin": ""
+  },
+  "output": {
+    "allowed": true,
+    "host": "127.0.0.1:3334",
+    "ok": true,
+    "origin": "",
+    "reason": "loopback"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "host": "example.com",
+    "origin": ""
+  },
+  "output": {
+    "allowed": false,
+    "host": "example.com",
+    "ok": true,
+    "origin": "",
+    "reason": "host_rejected"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "host": "127.0.0.1:3334",
+    "origin": "http://evil.example"
+  },
+  "output": {
+    "allowed": false,
+    "host": "127.0.0.1:3334",
+    "ok": true,
+    "origin": "http://evil.example",
+    "reason": "origin_rejected"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "host": "127.0.0.1:3334"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid host gate request."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_host_origin_gate_audit.test.js`.
