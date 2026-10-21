@@ -973,3 +973,65 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_reschedule_identity_audit.test.js`.
+
+
+<!-- community-core:json-body-gate-audit -->
+### Validate synthetic JSON body gate offline
+
+Helps local synthetic scheduling study by previewing fictional JSON body gate offline without server or storage. It supports the roadmap body-limit and content-type rules, complements UTC free-slot enumeration, conflict checks, draft, catalog, status, window, day-filter, reschedule, capacity and deletion audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application/UI integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/json_body_gate_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys contentType and bodyByteLength, both required. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. contentType must be a string length 1..128. bodyByteLength must be an integer number 0..65535. Any missing key, extra key, wrong type, or range violation makes payload invalid. On any invalid payload it returns ok false with error code validation_error and message invalid body gate request with no partial result. Otherwise if contentType is not exactly application/json it returns ok false with error code json_required and message json required. Otherwise if bodyByteLength is greater than 8192 it returns ok false with error code body_too_large and message body too large. Otherwise it returns ok true with accepted true, contentType application/json, echoed bodyByteLength and limit 8192. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "bodyByteLength": 123,
+    "contentType": "application/json"
+  },
+  "output": {
+    "accepted": true,
+    "bodyByteLength": 123,
+    "contentType": "application/json",
+    "limit": 8192,
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "bodyByteLength": 100,
+    "contentType": "text/plain"
+  },
+  "output": {
+    "error": {
+      "code": "json_required",
+      "message": "json required."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "bodyByteLength": 8193,
+    "contentType": "application/json"
+  },
+  "output": {
+    "error": {
+      "code": "body_too_large",
+      "message": "body too large."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_json_body_gate_audit.test.js`.
