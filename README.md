@@ -214,3 +214,114 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_practitioner_catalog_audit.test.js`.
+
+
+<!-- community-core:utc-day-agenda-filter -->
+### Filter synthetic day agenda offline by UTC date
+
+Helps local synthetic scheduling study by reproducing UTC-day filtering and ordering offline without server or storage. It supports agenda listing demos and tests, complements UTC free-slot enumeration and conflict checks without duplicating them, and gives a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/utc_day_agenda_filter.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. Input payload must be a plain object with only keys date, practitionerId optional, and appointments required. Null, array, or non-object payload is invalid. Extra payload keys make payload invalid. date must be a string length 10 of form YYYY-MM-DD with literal hyphens at fixed positions, year 0000 to 9999, month 01 to 12, day valid for month including leap-year February where February has 29 days when year divisible by 400 or divisible by 4 and not by 100 else 28 days, other months 30 or 31 days as per calendar. practitionerId when present must be a string length 6 to 64 starting with demo- containing only ASCII letters, digits, hyphen and underscore. appointments must be an array of 0 to 200 entries. Each entry must be a plain object with only keys id, practitionerId and startsAt. id must be a string length 1 to 64 containing only ASCII letters, digits, hyphen and underscore. practitionerId entry rule same as filter rule. startsAt must be a string length 24 of exact form YYYY-MM-DDTHH:MM:00.000Z with literal T, colons, dot and Z at fixed positions, year 0000 to 9999, month 01 to 12, day valid for month with same leap rule, hour 00 to 23, minute 00 or 15 or 30 or 45, seconds 00 and millis 000. Missing keys, extra keys, wrong types, or any field rule violation makes payload invalid. On any invalid payload it returns ok false with error code validation_error and message invalid day agenda filter with no partial list. Otherwise it keeps entries where first 10 characters of startsAt equal date and where practitionerId filter when present equals entry practitionerId, sorts kept entries lexicographically by startsAt then id, and returns ok true with date echoing input date, count equal to kept length, and appointments as new array of copies with only allowed keys. It preserves input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get and set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "appt-002",
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T12:30:00.000Z"
+      },
+      {
+        "id": "appt-001",
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T12:00:00.000Z"
+      }
+    ],
+    "date": "2030-04-08"
+  },
+  "output": {
+    "appointments": [
+      {
+        "id": "appt-001",
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T12:00:00.000Z"
+      },
+      {
+        "id": "appt-002",
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T12:30:00.000Z"
+      }
+    ],
+    "count": 2,
+    "date": "2030-04-08",
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "appt-010",
+        "practitionerId": "demo-cardio",
+        "startsAt": "2030-04-08T09:00:00.000Z"
+      },
+      {
+        "id": "appt-011",
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T09:00:00.000Z"
+      },
+      {
+        "id": "appt-012",
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-09T09:00:00.000Z"
+      }
+    ],
+    "date": "2030-04-08",
+    "practitionerId": "demo-clinica-geral"
+  },
+  "output": {
+    "appointments": [
+      {
+        "id": "appt-011",
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T09:00:00.000Z"
+      }
+    ],
+    "count": 1,
+    "date": "2030-04-08",
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "appt-001",
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T12:00:00.000Z"
+      }
+    ],
+    "date": "2030-13-08"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid day agenda filter."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_utc_day_agenda_filter.test.js`.
