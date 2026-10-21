@@ -776,3 +776,90 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_day_capacity_audit.test.js`.
+
+
+<!-- community-core:appointment-deletion-audit -->
+### Preview synthetic appointment deletion offline
+
+Helps local synthetic scheduling study by previewing fictional appointment deletion offline without server or storage. It supports the roadmap deletion flow, complements UTC free-slot enumeration, conflict checks, draft, catalog, status, window, day-filter, reschedule and capacity audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application/UI integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/appointment_deletion_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys appointments and id, both required. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. appointments must be an array of 0..50 entries. id must be a string length 1..64 containing only ASCII letters, digits, hyphen and underscore. Each appointment entry must be a plain object with only keys id, practitionerId and status, all required. Entry id follows same 1..64 rule. practitionerId must be a string length 6..64 starting with demo- containing only ASCII letters, digits, hyphen and underscore. status must be exactly scheduled or completed or cancelled. Any missing key, extra key, wrong type, field rule violation, duplicate entry ids, or over 50 entries makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid deletion request."}} with no partial result. Otherwise if no entry id equals request id it returns {ok:false,error:{code:"appointment_not_found",message:"appointment not found."}}. Otherwise it returns {ok:true,id,practitionerId,status,remainingCount,remaining} where id, practitionerId and status are new string copies from the matched entry, remaining is a new array containing new copies with only allowed keys for all non-matching entries preserving input order, and remainingCount equals remaining length. Empty appointments with valid id yields not-found. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "apt-001",
+        "practitionerId": "demo-clinica-geral",
+        "status": "scheduled"
+      },
+      {
+        "id": "apt-002",
+        "practitionerId": "demo-clinica-geral",
+        "status": "completed"
+      }
+    ],
+    "id": "apt-001"
+  },
+  "output": {
+    "id": "apt-001",
+    "ok": true,
+    "practitionerId": "demo-clinica-geral",
+    "remaining": [
+      {
+        "id": "apt-002",
+        "practitionerId": "demo-clinica-geral",
+        "status": "completed"
+      }
+    ],
+    "remainingCount": 1,
+    "status": "scheduled"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [],
+    "extra": 1,
+    "id": "apt-001"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid deletion request."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "apt-001",
+        "practitionerId": "demo-cardio",
+        "status": "cancelled"
+      }
+    ],
+    "id": "apt-999"
+  },
+  "output": {
+    "error": {
+      "code": "appointment_not_found",
+      "message": "appointment not found."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_appointment_deletion_audit.test.js`.
