@@ -479,3 +479,73 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_schedule_conflict_audit.test.js`.
+
+
+<!-- community-core:appointment-draft-audit -->
+### Validate synthetic appointment draft offline with UTC normalization
+
+Helps local synthetic scheduling study by validating a fictional appointment draft offline without server or storage. It mirrors creation rules for practitioner, patient reference, timezone-aware start and duration plus UTC normalization, complements free-slot enumeration, conflict checks, day filtering, catalog and status audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/appointment_draft_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys practitionerId, patientRef, startsAt and durationMinutes, all required. Null, array, or non-object payload is invalid. Extra payload keys, missing keys, or wrong types make payload invalid. practitionerId must be a string length 6 to 64 starting with demo- containing only ASCII letters, digits, hyphen and underscore. patientRef must be a string length 1 to 48 containing only ASCII letters, digits, hyphen and underscore. durationMinutes must be an integer number 15 to 120 multiple of 15. startsAt must be a string length 20 or 25 with explicit timezone, either form YYYY-MM-DDTHH colon MM colon 00Z with length 20 or form YYYY-MM-DDTHH colon MM colon 00 plus or minus HH colon MM with length 25, with literal hyphens, T, colons and Z or sign at fixed positions and ASCII digits elsewhere; year 0000 to 9999, month 01 to 12, day valid for month including leap-year February with 29 days when year divisible by 400 or divisible by 4 and not by 100 else 28 days, hour 00 to 23, minute 00 or 15 or 30 or 45, seconds 00; offset when present must have sign plus or minus, hour 00 to 14, minute 00 or 15 or 30 or 45, with hour 14 requiring minute 00. Local grid violations make payload invalid. On any invalid payload it returns ok false with error code validation_error and message invalid appointment draft with trailing period and no partial result. Otherwise it computes startsAtUtc as UTC-normalized string of exact form YYYY-MM-DDTHH colon MM colon 00 dot 000Z with length 24 via calendar arithmetic where UTC equals local minus signed offset, carrying across days, months and years with month lengths and leap rule, without Date; if normalized year falls outside 0000 to 9999 or normalized minute is not 00 or 15 or 30 or 45 it returns the same validation_error. Otherwise it returns ok true with practitionerId, patientRef, startsAt, startsAtUtc and durationMinutes echoing inputs plus computed UTC. It never mutates input. It builds results with object literals, arrays with push and Map get and set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "durationMinutes": 30,
+    "patientRef": "exemplo_001",
+    "practitionerId": "demo-clinica-geral",
+    "startsAt": "2030-04-08T09:00:00-03:00"
+  },
+  "output": {
+    "durationMinutes": 30,
+    "ok": true,
+    "patientRef": "exemplo_001",
+    "practitionerId": "demo-clinica-geral",
+    "startsAt": "2030-04-08T09:00:00-03:00",
+    "startsAtUtc": "2030-04-08T12:00:00.000Z"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "durationMinutes": 15,
+    "patientRef": "synthetic_001",
+    "practitionerId": "demo-cardio",
+    "startsAt": "2030-04-08T12:00:00Z"
+  },
+  "output": {
+    "durationMinutes": 15,
+    "ok": true,
+    "patientRef": "synthetic_001",
+    "practitionerId": "demo-cardio",
+    "startsAt": "2030-04-08T12:00:00Z",
+    "startsAtUtc": "2030-04-08T12:00:00.000Z"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "durationMinutes": 30,
+    "patientRef": "synthetic_001",
+    "practitionerId": "demo-cardio",
+    "startsAt": "2030-04-08T09:00:00+03:07"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid appointment draft."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_appointment_draft_audit.test.js`.
