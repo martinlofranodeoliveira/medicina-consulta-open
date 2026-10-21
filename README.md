@@ -672,3 +672,107 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_reschedule_request_audit.test.js`.
+
+
+<!-- community-core:day-capacity-audit -->
+### Audit synthetic UTC day capacity offline
+
+Helps local synthetic scheduling study by auditing fictional UTC day load against a configurable capacity offline without server or storage. It supports roadmap agenda filtering and availability work, complements UTC free-slot enumeration, draft validation, conflict checks, catalog, status, window and day-filter audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/day_capacity_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys date, practitionerId, capacity and appointments, all required. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. date must be a string length 10 of exact form YYYY-MM-DD with literal hyphens at fixed positions and ASCII digits elsewhere; year 0000 to 9999, month 01 to 12, day valid for month including leap-year February with 29 days when year divisible by 400 or divisible by 4 and not by 100 else 28 days, April June September November 30 days, others 31 days. practitionerId must be a string length 6..64 starting with demo- containing only ASCII letters, digits, hyphen and underscore. capacity must be an integer number 1 to 32. appointments must be an array of 0..100 entries. Each entry must be a plain object with only keys startsAt, practitionerId and status, all required. startsAt must be a string length 24 of exact form YYYY-MM-DDTHH:MM:00.000Z with literal hyphens, T, colons, dot and Z at fixed positions and ASCII digits elsewhere; month 01 to 12, day valid for month including leap-year February as above, hour 00 to 23, minute 00 or 15 or 30 or 45, seconds 00 and millis 000. Entry practitionerId follows same demo- rule. status must be exactly scheduled or completed or cancelled. Any missing key, extra key, wrong type or field rule violation or over 100 entries makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid day capacity request."}} with no partial result. Otherwise booked counts entries where entry practitionerId equals request practitionerId and entry status is scheduled or completed and entry startsAt slice 0..10 equals date; cancelled, other practitioners and other UTC days are ignored and adjacency needs no check. It returns {ok:true,date,practitionerId,capacity,booked,remaining,isFull} where date and practitionerId are new string copies, booked is counted matches, remaining is capacity minus booked when booked below capacity else 0, isFull is true when booked equals or exceeds capacity else false. Empty matches yield booked 0, remaining capacity and isFull false. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T12:00:00.000Z",
+        "status": "scheduled"
+      },
+      {
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T12:30:00.000Z",
+        "status": "completed"
+      },
+      {
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T13:00:00.000Z",
+        "status": "cancelled"
+      }
+    ],
+    "capacity": 2,
+    "date": "2030-04-08",
+    "practitionerId": "demo-clinica-geral"
+  },
+  "output": {
+    "booked": 2,
+    "capacity": 2,
+    "date": "2030-04-08",
+    "isFull": true,
+    "ok": true,
+    "practitionerId": "demo-clinica-geral",
+    "remaining": 0
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "practitionerId": "demo-cardio",
+        "startsAt": "2030-04-08T12:00:00.000Z",
+        "status": "scheduled"
+      },
+      {
+        "practitionerId": "demo-cardio",
+        "startsAt": "2030-04-09T12:00:00.000Z",
+        "status": "scheduled"
+      },
+      {
+        "practitionerId": "demo-clinica-geral",
+        "startsAt": "2030-04-08T12:15:00.000Z",
+        "status": "scheduled"
+      }
+    ],
+    "capacity": 3,
+    "date": "2030-04-08",
+    "practitionerId": "demo-cardio"
+  },
+  "output": {
+    "booked": 1,
+    "capacity": 3,
+    "date": "2030-04-08",
+    "isFull": false,
+    "ok": true,
+    "practitionerId": "demo-cardio",
+    "remaining": 2
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [],
+    "capacity": 2,
+    "date": "2030-02-30",
+    "practitionerId": "demo-cardio"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid day capacity request."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_day_capacity_audit.test.js`.
