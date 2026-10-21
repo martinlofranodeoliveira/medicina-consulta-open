@@ -1112,3 +1112,69 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_host_origin_gate_audit.test.js`.
+
+
+<!-- community-core:error-envelope-audit -->
+### Validate synthetic error envelope offline
+
+Helps local synthetic scheduling study by validating fictional error envelopes offline without server or storage. It supports the documented error format and status mapping, complements UTC free-slot enumeration, draft validation, conflict checks, catalog, status, window, day-filter, reschedule, capacity, deletion, body-gate and host-gate audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/error_envelope_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key error as a plain object. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. The error object must be a plain object with only keys code and message, both required. code must be a string exactly one of validation_error, schedule_conflict, invalid_transition, practitioner_not_found, appointment_not_found, body_too_large, json_required, checked with Map get/set. message must be a string length 1..200 without leading/trailing space, TAB, LF or CR and without other C0 controls. Any missing key, extra key, wrong type, unknown code, or message rule violation makes payload invalid. On any invalid payload it returns {ok:false,error:{code:'validation_error',message:'invalid error envelope.'}} with no partial result. Otherwise it returns {ok:true,valid:true,code,message} where code and message are new string copies of the input error fields. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "error": {
+      "code": "schedule_conflict",
+      "message": "Busy interval."
+    }
+  },
+  "output": {
+    "code": "schedule_conflict",
+    "message": "Busy interval.",
+    "ok": true,
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "error": {
+      "code": "validation_error",
+      "message": "Bad input."
+    }
+  },
+  "output": {
+    "code": "validation_error",
+    "message": "Bad input.",
+    "ok": true,
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "error": {
+      "code": "unknown_code",
+      "message": "Hello."
+    }
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid error envelope."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_error_envelope_audit.test.js`.
