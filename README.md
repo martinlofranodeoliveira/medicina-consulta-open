@@ -549,3 +549,67 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_appointment_draft_audit.test.js`.
+
+
+<!-- community-core:availability-window-audit -->
+### Validate synthetic availability window offline
+
+Helps local synthetic scheduling study by validating a fictional free-slot query window offline without server or storage. It supports the roadmap item for availability intervals, complements UTC free-slot enumeration and conflict checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/availability_window_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys windowStart, windowEnd and durationMinutes, all required. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. windowStart and windowEnd must each be a string length 24 of exact form YYYY-MM-DDTHH:MM:00.000Z with literal hyphens, T, colons, dot and Z at fixed positions; year 0000 to 9999, month 01 to 12, day valid for month including leap-year February with 29 days when year divisible by 400 or divisible by 4 and not by 100 else 28 days, hour 00 to 23, minute 00 or 15 or 30 or 45, seconds 00 and millis 000. durationMinutes must be an integer number 15 to 120 multiple of 15. windowEnd must be lexicographically greater than windowStart as canonical UTC chronological order. Any missing key, extra key, wrong type or field, grid, calendar or ordering violation makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid availability window."}} with no partial result. Otherwise it returns {ok:true,windowStart,windowEnd,durationMinutes} with new string copies and same number. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "durationMinutes": 30,
+    "windowEnd": "2030-04-08T14:00:00.000Z",
+    "windowStart": "2030-04-08T12:00:00.000Z"
+  },
+  "output": {
+    "durationMinutes": 30,
+    "ok": true,
+    "windowEnd": "2030-04-08T14:00:00.000Z",
+    "windowStart": "2030-04-08T12:00:00.000Z"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "durationMinutes": 30,
+    "windowEnd": "2030-04-08T12:00:00.000Z",
+    "windowStart": "2030-04-08T14:00:00.000Z"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid availability window."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "durationMinutes": 30,
+    "windowEnd": "2030-04-08T14:00:00.000Z",
+    "windowStart": "2030-04-08T12:07:00.000Z"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid availability window."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_availability_window_audit.test.js`.
