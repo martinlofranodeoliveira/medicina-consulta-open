@@ -128,3 +128,89 @@ O endereço padrão é o loopback `http://127.0.0.1:3334`. O servidor escuta exc
 - O reagendamento aceita somente `startsAt` e `durationMinutes`, preserva a identidade (mesmo `id`, profissional, referência fictícia, estado e data de criação) e preserva o intervalo antigo em caso de conflito, entrada inválida ou falha de gravação.
 
 Os testes descritivos de esquema/contrato em `test/openapi.test.js` verificam apenas um subconjunto da estrutura, referências locais, esquemas e ilustrações sintéticas. Eles não são um validador completo de conformidade OAS, nem segurança automática, nem prontidão real de disponibilidade/clínica, nem permissão para expor o servidor. Use somente dados sintéticos (ex.: `synthetic_001`).
+
+
+<!-- community-core:practitioner-catalog-audit -->
+### Validate synthetic practitioner catalog offline
+
+Helps local synthetic scheduling study by validating a configurable fictional practitioner catalog offline without server or storage. It supports the roadmap item for validated catalog separation, complements UTC free-slot enumeration and appointment conflict checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/practitioner_catalog_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. Input payload must be a plain object with only key practitioners as array of 1..100 entries. Each entry must be a plain object with required id string and only optional keys name and specialty. id must be string length 6..64 starting with demo-, containing only ASCII letters, digits, hyphen and underscore. Optional name and specialty when present must be strings length 1..80 without leading/trailing space, TAB, LF or CR and without other C0 controls. Extra keys, missing id, wrong types, empty array, over 100 entries, duplicate ids, or any id/name/specialty rule violation makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid practitioner catalog."}} with no partial list. Otherwise it returns {ok:true,count,practitioners} where count equals input length and practitioners is a new array sorted lexicographically by id containing copies with only supplied allowed keys, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "practitioners": [
+      {
+        "id": "demo-clinica-geral",
+        "name": "Geral"
+      },
+      {
+        "id": "demo-cardio",
+        "name": "Cardio"
+      }
+    ]
+  },
+  "output": {
+    "count": 2,
+    "ok": true,
+    "practitioners": [
+      {
+        "id": "demo-cardio",
+        "name": "Cardio"
+      },
+      {
+        "id": "demo-clinica-geral",
+        "name": "Geral"
+      }
+    ]
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "practitioners": [
+      {
+        "id": "prod-cardio"
+      }
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid practitioner catalog."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "practitioners": [
+      {
+        "id": "demo-a"
+      },
+      {
+        "id": "demo-a"
+      }
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid practitioner catalog."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_practitioner_catalog_audit.test.js`.
