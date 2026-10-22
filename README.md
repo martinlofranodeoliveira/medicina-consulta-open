@@ -1418,3 +1418,76 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_appointment_identifier_audit.test.js`.
+
+
+<!-- community-core:agenda-query-gate-audit -->
+### Audit synthetic agenda query filters offline
+
+Helps local synthetic scheduling study by validating fictional GET /api/appointments query filters offline without server or storage. It supports the documented UTC-day date filter, demo-* practitionerId filter, and unknown-filter 400 rule, complements UTC free-slot enumeration, appointment conflict checks, draft, catalog, status, window, day-filter, reschedule, capacity, deletion, duration, patient-reference, start-grid, identifier, body-gate, host-gate and error-envelope audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/agenda_query_gate_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only allowed keys date and practitionerId, zero to two entries. Null, array or non-object payload is invalid. Extra keys make payload invalid. date when present must be a string length 10 shaped YYYY-MM-DD, checked character by character with for-of and Map get/set without indexed variable access. Year 0000-9999, month 01-12, day valid for month including leap-year February 29 rule, with dashes in fixed positions and all other characters ASCII digits. practitionerId when present must be a string length 6..64 starting with demo-, containing only ASCII letters, digits, hyphen and underscore, checked character by character with for-of and Map get/set without indexed variable access. Any wrong type, length, separator, calendar, prefix or character violation makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid appointment query."}} with no partial result. Otherwise it returns {ok:true,valid:true,query} where query is a new object containing only supplied allowed keys with new string copies built by concatenation. Empty input returns empty query object. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "date": "2030-04-08",
+    "practitionerId": "demo-clinica-geral"
+  },
+  "output": {
+    "ok": true,
+    "query": {
+      "date": "2030-04-08",
+      "practitionerId": "demo-clinica-geral"
+    },
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {},
+  "output": {
+    "ok": true,
+    "query": {},
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "date": "2030-04-08",
+    "unknown": "x"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid appointment query."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "date": "2030-02-30"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid appointment query."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_agenda_query_gate_audit.test.js`.
