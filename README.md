@@ -1178,3 +1178,60 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_error_envelope_audit.test.js`.
+
+
+<!-- community-core:patient-reference-audit -->
+### Validate synthetic patient reference offline
+
+Helps local synthetic scheduling study by validating fictional patient references offline without server or storage. It supports the documented patientRef charset and length rule, complements UTC free-slot enumeration, draft validation, conflict checks, catalog, status, window, day-filter, reschedule, capacity, deletion, body-gate, host-gate and error-envelope audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/patient_reference_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key patientRef required. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. patientRef must be a string length 1..48 containing only ASCII letters A-Z a-z, digits 0-9, hyphen - and underscore _, checked character by character with for-of and Map get/set without indexed access. Any missing key, extra key, wrong type, length violation, or disallowed character makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid patient reference."}} with no partial result. Otherwise it returns {ok:true,valid:true,patientRef} where patientRef is a new string copy built by concatenation. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "patientRef": "exemplo_001"
+  },
+  "output": {
+    "ok": true,
+    "patientRef": "exemplo_001",
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "patientRef": "bad ref!"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid patient reference."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "patientRef": ""
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid patient reference."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_patient_reference_audit.test.js`.
