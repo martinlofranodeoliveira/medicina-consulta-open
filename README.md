@@ -1491,3 +1491,188 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_agenda_query_gate_audit.test.js`.
+
+
+<!-- community-core:openapi-inventory-audit -->
+### Audit synthetic OpenAPI operation inventory offline
+
+Helps local synthetic scheduling study by validating the fictional eight-operation OpenAPI inventory offline without server or storage. It supports the roadmap item for OpenAPI specification compatibility, complements UTC free-slot enumeration, appointment conflict checks, draft, catalog, status, window, day-filter, reschedule, capacity, deletion, duration, patient-reference, start-grid, identifier, query-gate, body-gate, host-gate and error-envelope audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/openapi_inventory_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key operations as array of exactly 8 entries. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. Each entry must be a plain object with required method and path strings and no other keys. method must be exactly one of GET, POST, PATCH, DELETE. path must be exactly one of /, /health, /api/practitioners, /api/appointments, /api/appointments/:id, /api/appointments/:id/reschedule, checked character by character with for-of and Map get/set without indexed variable access. The multiset of method+path pairs must equal exactly the eight documented operations: GET /, GET /health, GET /api/practitioners, GET /api/appointments, POST /api/appointments, PATCH /api/appointments/:id, DELETE /api/appointments/:id, POST /api/appointments/:id/reschedule; missing, extra, duplicate or mismatched pairs make payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid openapi inventory."}} with no partial list. Otherwise it returns {ok:true,count:8,operations} where operations is a new array sorted lexicographically by method then path containing copies with only method and path as new string copies built by concatenation. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "operations": [
+      {
+        "method": "POST",
+        "path": "/api/appointments"
+      },
+      {
+        "method": "GET",
+        "path": "/health"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/appointments/:id"
+      },
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "POST",
+        "path": "/api/appointments/:id/reschedule"
+      },
+      {
+        "method": "GET",
+        "path": "/api/practitioners"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/appointments/:id"
+      },
+      {
+        "method": "GET",
+        "path": "/api/appointments"
+      }
+    ]
+  },
+  "output": {
+    "count": 8,
+    "ok": true,
+    "operations": [
+      {
+        "method": "DELETE",
+        "path": "/api/appointments/:id"
+      },
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "GET",
+        "path": "/api/appointments"
+      },
+      {
+        "method": "GET",
+        "path": "/api/practitioners"
+      },
+      {
+        "method": "GET",
+        "path": "/health"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/appointments/:id"
+      },
+      {
+        "method": "POST",
+        "path": "/api/appointments"
+      },
+      {
+        "method": "POST",
+        "path": "/api/appointments/:id/reschedule"
+      }
+    ]
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "operations": [
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "GET",
+        "path": "/health"
+      },
+      {
+        "method": "GET",
+        "path": "/api/practitioners"
+      },
+      {
+        "method": "GET",
+        "path": "/api/appointments"
+      },
+      {
+        "method": "POST",
+        "path": "/api/appointments"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/appointments/:id"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/appointments/:id"
+      }
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid openapi inventory."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "operations": [
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "GET",
+        "path": "/health"
+      },
+      {
+        "method": "GET",
+        "path": "/api/practitioners"
+      },
+      {
+        "method": "GET",
+        "path": "/api/appointments"
+      },
+      {
+        "method": "POST",
+        "path": "/api/appointments"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/appointments/:id"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/appointments/:id"
+      },
+      {
+        "method": "GET",
+        "path": "/api/availability"
+      }
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid openapi inventory."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_openapi_inventory_audit.test.js`.
