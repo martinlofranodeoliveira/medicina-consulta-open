@@ -1235,3 +1235,73 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_patient_reference_audit.test.js`.
+
+
+<!-- community-core:duration-minutes-audit -->
+### Audit synthetic duration minutes offline
+
+Helps local synthetic scheduling study by validating fictional durationMinutes offline without server or storage. It supports the documented 15-to-120 quarter-hour grid, complements UTC free-slot enumeration, conflict checks, draft, catalog, status, window, day-filter, reschedule, capacity, deletion, body-gate, host-gate and error-envelope audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/duration_minutes_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key durationMinutes required. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. durationMinutes must be a number that is an integer. Any missing key, extra key, wrong type or non-integer number makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid duration request."}} with no partial result. Otherwise it checks the allowed synthetic grid with Map get/set: value must be one of 15,30,45,60,75,90,105,120. If integer value is below 15 or above 120 it returns {ok:true,valid:false,reason:"range_error",durationMinutes}; if inside 15..120 but not a multiple of 15 it returns {ok:true,valid:false,reason:"grid_error",durationMinutes}. Otherwise it returns {ok:true,valid:true,durationMinutes} with the same numeric value. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "durationMinutes": 45
+  },
+  "output": {
+    "durationMinutes": 45,
+    "ok": true,
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "durationMinutes": 20
+  },
+  "output": {
+    "durationMinutes": 20,
+    "ok": true,
+    "reason": "grid_error",
+    "valid": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "durationMinutes": 200
+  },
+  "output": {
+    "durationMinutes": 200,
+    "ok": true,
+    "reason": "range_error",
+    "valid": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "durationMinutes": "30"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid duration request."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_duration_minutes_audit.test.js`.
