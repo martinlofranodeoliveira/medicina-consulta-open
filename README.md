@@ -1676,3 +1676,93 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_openapi_inventory_audit.test.js`.
+
+
+<!-- community-core:ordered-agenda-audit -->
+### Validate synthetic ordered agenda offline
+
+Helps local synthetic scheduling study by validating fictional agenda ordering offline without server or storage. It supports the documented ordered agenda sorted by startsAt, complements UTC-day filtering, free-slot enumeration, draft validation, conflict checks, catalog, status, deletion and other audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/ordered_agenda_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key appointments as array of 0..200 entries. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. Each entry must be a plain object with required keys id and startsAt and no other keys. id must be a string length 1..64. startsAt must be a string length 1..64. Any missing key, extra key, wrong type, or length violation makes payload invalid. Entries must already be in non-decreasing lexicographic order by startsAt using < comparison with no Date use; equal startsAt values are allowed; any decreasing startsAt pair makes payload invalid. It does not check UUID shape, 15-minute grid, timezone semantics, catalog membership, or overlap conflicts. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid ordered agenda."}} with no partial list. Otherwise it returns {ok:true,count,appointments} where count equals input length and appointments is a new array preserving input order containing copies with only id and startsAt as new string copies built by concatenation. Empty array returns count 0 and empty appointments. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "a1",
+        "startsAt": "2030-04-08T12:00:00.000Z"
+      },
+      {
+        "id": "a2",
+        "startsAt": "2030-04-08T12:15:00.000Z"
+      }
+    ]
+  },
+  "output": {
+    "appointments": [
+      {
+        "id": "a1",
+        "startsAt": "2030-04-08T12:00:00.000Z"
+      },
+      {
+        "id": "a2",
+        "startsAt": "2030-04-08T12:15:00.000Z"
+      }
+    ],
+    "count": 2,
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "a2",
+        "startsAt": "2030-04-08T12:15:00.000Z"
+      },
+      {
+        "id": "a1",
+        "startsAt": "2030-04-08T12:00:00.000Z"
+      }
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid ordered agenda."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "a1",
+        "practitionerId": "demo-cardio",
+        "startsAt": "2030-04-08T12:00:00.000Z"
+      }
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid ordered agenda."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_ordered_agenda_audit.test.js`.
