@@ -1305,3 +1305,58 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_duration_minutes_audit.test.js`.
+
+
+<!-- community-core:start-instant-grid-audit -->
+### Audit synthetic start instant grid offline
+
+Helps local synthetic scheduling study by validating fictional startsAt instants for quarter-hour grid and explicit zone offline without server or storage. It supports the documented startsAt grid and explicit-timezone rule, complements UTC free-slot enumeration, conflict checks, draft, catalog, status, window, day-filter, reschedule, capacity, deletion, duration, patient-reference, body-gate, host-gate and error-envelope audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/start_instant_grid_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key startsAt required. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. startsAt must be a string either YYYY-MM-DDTHH:MM:SS shape with Z (length 20) or with signed offset HH:MM (length 25), checked character by character with for-of and Map get-set without indexed variable access. Date part must have year 0000-9999, month 01-12, day valid for month including leap-year February 29 rule, with separators dash and T and colon in fixed positions. Time part must have hour 00-23, minute one of 00,15,30,45, second 00. Zone must be Z or sign plus or minus with offset hour 00-14 and offset minute one of 00,15,30,45 with 14:00 only, so offsets like +03:07 are rejected. Any missing key, extra key, wrong type, length, separator, calendar, time-grid, seconds, or zone-grid violation makes payload invalid. On any invalid payload it returns ok false with validation_error invalid start instant and no partial result. Otherwise it returns ok true valid true with equal startsAt as a new string copy built by concatenation. It never mutates input. It builds results with object literals, arrays with push and Map get-set, using for-of and Object entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "startsAt": "2030-04-08T09:00:00-03:00"
+  },
+  "output": {
+    "ok": true,
+    "startsAt": "2030-04-08T09:00:00-03:00",
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "startsAt": "2030-04-08T12:00:00Z"
+  },
+  "output": {
+    "ok": true,
+    "startsAt": "2030-04-08T12:00:00Z",
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "startsAt": "2030-04-08T09:07:00-03:00"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid start instant."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_start_instant_grid_audit.test.js`.
