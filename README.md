@@ -1360,3 +1360,61 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_start_instant_grid_audit.test.js`.
+
+
+<!-- community-core:appointment-identifier-audit -->
+### Validate synthetic appointment identifier offline
+
+Helps local synthetic scheduling study by validating fictional appointment identifiers offline without server or storage. It supports the documented :id routes for lookup, reschedule, status change and deletion, complements UTC free-slot enumeration, draft validation, conflict checks, catalog, status, window, day-filter, reschedule, capacity, deletion, duration, patient-reference, start-grid, body-gate, host-gate and error-envelope audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/appointment_identifier_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key id required. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. id must be a string length 36 with hyphens at positions 8, 13, 18 and 23 and all other characters lowercase hexadecimal 0-9 or a-f, checked character by character with for-of and Map get/set without indexed variable access. Any missing key, extra key, wrong type, length violation, misplaced hyphen, or non-hex character makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid appointment identifier."}} with no partial result. Otherwise it returns {ok:true,valid:true,id} where id is a new string copy built by concatenation. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "id": "123e4567-e89b-12d3-a456-426614174000"
+  },
+  "output": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "ok": true,
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "id": "123E4567-E89B-12D3-A456-426614174000"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid appointment identifier."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "extra": 1,
+    "id": "123e4567-e89b-12d3-a456-426614174000"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid appointment identifier."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_appointment_identifier_audit.test.js`.
