@@ -1766,3 +1766,67 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_ordered_agenda_audit.test.js`.
+
+
+<!-- community-core:utc-year-bounds-audit -->
+### Audit synthetic UTC year bounds offline
+
+Helps local synthetic scheduling study by validating fictional reported and UTC-normalized calendar years offline without server or storage. It supports the documented 0000-9999 persistable-year rule for creation and reschedule, complements UTC free-slot enumeration, appointment conflict checks, draft, catalog, status, window, day-filter, reschedule, capacity, deletion, duration, patient-reference, start-grid, identifier, query-gate, body-gate, host-gate, ordered-agenda, openapi-inventory and error-envelope audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/utc_year_bounds_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys localYear and utcYear, exactly two entries. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. Each value must be a string length 4 containing only ASCII digits 0-9, checked character by character with for-of and Map get/set without indexed variable access, representing years 0000-9999. Any wrong type, length, or non-digit character makes payload invalid, including 5-character 10000, negative, empty, or non-string years that would move persisted UTC instants outside the readable range. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid year bounds."}} with no partial result. Otherwise it returns {ok:true,valid:true,years:{localYear,utcYear}} where years is a new object containing new string copies built by concatenation for each year. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "localYear": "2030",
+    "utcYear": "2030"
+  },
+  "output": {
+    "ok": true,
+    "valid": true,
+    "years": {
+      "localYear": "2030",
+      "utcYear": "2030"
+    }
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "localYear": "0000",
+    "utcYear": "9999"
+  },
+  "output": {
+    "ok": true,
+    "valid": true,
+    "years": {
+      "localYear": "0000",
+      "utcYear": "9999"
+    }
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "localYear": "9999",
+    "utcYear": "10000"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid year bounds."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_utc_year_bounds_audit.test.js`.
