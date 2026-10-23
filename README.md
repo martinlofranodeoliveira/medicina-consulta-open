@@ -1928,3 +1928,66 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_icalendar_export_audit.test.js`.
+
+
+<!-- community-core:iana-day-query-audit -->
+### Validate synthetic IANA day query offline
+
+Helps local synthetic scheduling study by validating fictional day-filter requests for a requested IANA time zone offline without server or storage. It supports the roadmap item for day filtering in the requested IANA zone including daylight changes, complements UTC-day filtering and agenda query validation without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence.
+
+Reusable deterministic JSON core: `src/community/iana_day_query_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys date and timeZone, exactly two entries. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. date must be a string length 10 exactly matching YYYY-MM-DD with hyphens in fixed positions and digits elsewhere, month 01-12, day 01-31 with month lengths January March May July August October December 01-31, April June September November 01-30, February 01-29 without leap-year Date check, checked character by character with for-of and Map get/set without indexed variable access. timeZone must be a string length 3..64 containing only ASCII letters, digits, hyphen, underscore and slash, containing at least one slash, with no leading slash, trailing slash or double slash, each slash-separated component length 1..32 starting with an ASCII letter and containing only letters, digits, hyphen and underscore, checked character by character with for-of and Map get/set without indexed variable access. Any wrong type, length, character, structure, extra key or missing key makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid IANA day query."}} with no partial result. Otherwise it returns {ok:true,valid:true,query:{date,timeZone}} where query is a new object containing new string copies built by concatenation for each field. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "date": "2030-04-08",
+    "timeZone": "America/Sao_Paulo"
+  },
+  "output": {
+    "ok": true,
+    "query": {
+      "date": "2030-04-08",
+      "timeZone": "America/Sao_Paulo"
+    },
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "date": "2030-13-08",
+    "timeZone": "America/Sao_Paulo"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid IANA day query."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "date": "2030-04-08",
+    "timeZone": "Invalid_Zone!"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid IANA day query."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_iana_day_query_audit.test.js`.
