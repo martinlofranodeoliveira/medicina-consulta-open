@@ -1991,3 +1991,63 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_iana_day_query_audit.test.js`.
+
+
+<!-- community-core:creation-instant-audit -->
+### Audit synthetic creation instants offline
+
+Helps local synthetic scheduling study by validating fictional server-generated creation timestamps offline without server or storage. It supports the documented persistence-after-restart rule, complements UTC free-slot enumeration, appointment conflict checks, draft, catalog, status, window, day-filter, reschedule, capacity, deletion, duration, patient-reference, start-grid, identifier, query-gate, body-gate, host-gate, ordered-agenda, openapi-inventory, year-bounds, icalendar-export, IANA-day and error-envelope audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/creation_instant_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key createdAt, exactly one entry. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. createdAt must be a string length 24 exactly matching YYYY-MM-DDTHH:MM:SS.sssZ with T and Z and separators in fixed positions, checked character by character with for-of and Map get/set without indexed variable access, representing years 0000-9999, months 01-12, days 01-31 with month lengths January March May July August October December 01-31, April June September November 01-30, February 01-29 without leap-year Date check, hours 00-23, minutes 00-59, seconds 00-59 and millis 000-999. Any wrong type, length, character, range, extra key or missing key makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid creation instant."}} with no partial result. Otherwise it returns {ok:true,valid:true,instant:{createdAt}} where instant is a new object containing a new string copy built by concatenation. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "createdAt": "2030-04-08T12:00:00.000Z"
+  },
+  "output": {
+    "instant": {
+      "createdAt": "2030-04-08T12:00:00.000Z"
+    },
+    "ok": true,
+    "valid": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "createdAt": "2030-04-08T12:00:00.000"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid creation instant."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "createdAt": "2030-04-08T12:00:00.000Z",
+    "extra": 1
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid creation instant."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_creation_instant_audit.test.js`.
