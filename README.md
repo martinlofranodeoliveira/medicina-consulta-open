@@ -2296,3 +2296,78 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_agenda_totals_audit.test.js`.
+
+
+<!-- community-core:appointment-transition-gate-audit -->
+### Audit synthetic appointment status transition offline
+
+Helps local synthetic scheduling study by gating fictional appointment status moves offline without server or storage. It encodes the documented only-scheduled-may-complete-or-cancel rule, complements UTC free-slot enumeration, appointment conflict checks, catalog, status value, window, day-filter, reschedule identity/request, capacity, deletion, duration, patient-reference, start-grid, identifier, query-gate, body-gate, host-gate, ordered-agenda, openapi-inventory, year-bounds, error-envelope, icalendar-export, IANA-day, creation-instant, storage-snapshot, agenda-totals and server-info audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/appointment_transition_gate_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys from and to, exactly two entries. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. from must be exactly scheduled, completed or cancelled, checked character by character with for-of and Map get/set without indexed variable access. to must be exactly completed or cancelled, checked character by character with for-of and Map get/set without indexed variable access. Any wrong type, structure, extra key, missing key or value makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid status transition request."}} with no partial result. Otherwise it returns {ok:true,allowed,from,to} where allowed is true only when from is scheduled, otherwise false, and from/to are new string copies built by concatenation, reflecting the documented rule that only scheduled appointments may move to completed/cancelled. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "from": "scheduled",
+    "to": "completed"
+  },
+  "output": {
+    "allowed": true,
+    "from": "scheduled",
+    "ok": true,
+    "to": "completed"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "from": "scheduled",
+    "to": "cancelled"
+  },
+  "output": {
+    "allowed": true,
+    "from": "scheduled",
+    "ok": true,
+    "to": "cancelled"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "from": "completed",
+    "to": "cancelled"
+  },
+  "output": {
+    "allowed": false,
+    "from": "completed",
+    "ok": true,
+    "to": "cancelled"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "from": "scheduled",
+    "to": "scheduled"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid status transition request."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_appointment_transition_gate_audit.test.js`.
