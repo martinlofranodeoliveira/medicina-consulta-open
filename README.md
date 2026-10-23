@@ -2147,3 +2147,69 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_storage_snapshot_audit.test.js`.
+
+
+<!-- community-core:server-info-envelope-audit -->
+### Audit synthetic server info envelope offline
+
+Helps local synthetic scheduling study by validating fictional root/health version envelopes offline without server or storage. It supports reproducible demos and learning contracts for local mode and version display, complements UTC free-slot enumeration, appointment conflict checks, catalog, status, window, day-filter, reschedule, capacity, deletion, duration, patient-reference, start-grid, identifier, query-gate, body-gate, host-gate, ordered-agenda, openapi-inventory, year-bounds, error-envelope, icalendar-export, IANA-day, creation-instant and storage-snapshot audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/server_info_envelope_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys version, mode and status, exactly three entries. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. version must be a string length 1..32 containing only ASCII digits, ASCII letters, dot and hyphen, starting with an ASCII digit, checked character by character with for-of and Map get/set without indexed variable access. mode must be exactly local, demo or test, checked character by character with for-of and Map get/set without indexed variable access. status must be exactly ok, checked character by character with for-of and Map get/set without indexed variable access. Any wrong type, length, character, structure, extra key or missing key makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid server info envelope."}} with no partial result. Otherwise it returns {ok:true,info} where info is a new object with version, mode and status as new string copies built by concatenation. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "mode": "local",
+    "status": "ok",
+    "version": "1.0.0"
+  },
+  "output": {
+    "info": {
+      "mode": "local",
+      "status": "ok",
+      "version": "1.0.0"
+    },
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "mode": "local",
+    "status": "ok",
+    "version": "v!"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid server info envelope."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "mode": "prod",
+    "status": "ok",
+    "version": "1.0.0"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid server info envelope."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_server_info_envelope_audit.test.js`.
