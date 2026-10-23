@@ -2213,3 +2213,86 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_server_info_envelope_audit.test.js`.
+
+
+<!-- community-core:agenda-totals-audit -->
+### Audit synthetic agenda totals offline
+
+Helps local synthetic scheduling study by totalling a fictional agenda list offline without server or storage. It supports the documented cancelled-frees versus completed-holds rule, complements UTC free-slot enumeration, appointment conflict checks, catalog, status, window, day-filter, reschedule, capacity, deletion, duration, patient-reference, start-grid, identifier, query-gate, body-gate, host-gate, ordered-agenda, openapi-inventory, year-bounds, icalendar-export, IANA-day, creation-instant, storage-snapshot and error-envelope audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/agenda_totals_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key appointments, exactly one entry. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. appointments must be an array of 0..200 entries. Each entry must be a plain object with only keys practitionerId, status and durationMinutes, exactly three entries. Null, array or non-object entry is invalid. Extra or missing keys make payload invalid. practitionerId must be string length 6..64 starting with demo-, containing only ASCII letters, digits, hyphen and underscore, checked character by character with for-of and Map get/set without indexed variable access. status must be exactly scheduled, completed or cancelled, checked character by character with for-of and Map get/set without indexed variable access. durationMinutes must be a number that is a safe integer 15 to 120 multiple of 15 with no type coercion. Any wrong type, length, prefix, character, range, grid, structure, extra key or missing key makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid agenda totals request."}} with no partial result. Otherwise it returns {ok:true,total,scheduled,completed,cancelled,occupiedMinutes} where total equals appointments length and scheduled/completed/cancelled count entries by status and occupiedMinutes is the sum of durationMinutes for scheduled plus completed entries only, with cancelled freeing the interval. Empty array yields all zeros. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "durationMinutes": 30,
+        "practitionerId": "demo-cardio",
+        "status": "scheduled"
+      },
+      {
+        "durationMinutes": 15,
+        "practitionerId": "demo-cardio",
+        "status": "completed"
+      },
+      {
+        "durationMinutes": 30,
+        "practitionerId": "demo-geral",
+        "status": "cancelled"
+      }
+    ]
+  },
+  "output": {
+    "cancelled": 1,
+    "completed": 1,
+    "occupiedMinutes": 45,
+    "ok": true,
+    "scheduled": 1,
+    "total": 3
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": []
+  },
+  "output": {
+    "cancelled": 0,
+    "completed": 0,
+    "occupiedMinutes": 0,
+    "ok": true,
+    "scheduled": 0,
+    "total": 0
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "durationMinutes": 20,
+        "practitionerId": "demo-cardio",
+        "status": "scheduled"
+      }
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid agenda totals request."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_agenda_totals_audit.test.js`.
