@@ -2371,3 +2371,63 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_appointment_transition_gate_audit.test.js`.
+
+
+<!-- community-core:loopback-bind-audit -->
+### Audit synthetic loopback bind config offline
+
+Helps local synthetic scheduling study by validating fictional server bind config offline without server or storage. It enforces the documented loopback-only '127.0.0.1' rule with configurable port, complements host-origin gate, server-info, health, openapi-inventory and storage-snapshot audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/loopback_bind_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys host and port, exactly two entries. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. host must be string length 1..253 containing only ASCII letters, digits, dot and hyphen, without leading/trailing space, TAB, LF or CR and without other C0 controls, checked character by character with for-of and Map get/set without indexed variable access. port must be a number that is a safe integer 1..65535 with no type coercion. Any wrong type, length, character, range, structure, extra key or missing key makes payload invalid. On any invalid payload it returns {ok:false,error:{code:'validation_error',message:'invalid loopback bind config.'}} with no partial result. Otherwise it returns {ok:true,safe,host,port} where safe is true only when host is exactly '127.0.0.1' checked character by character, otherwise false, host is a new string copy built by concatenation and port is the same number, reflecting the documented rule that the demo server listens exclusively on '127.0.0.1' with default port 3334 and must not be exposed via proxy or tunnel. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "host": "127.0.0.1",
+    "port": 3334
+  },
+  "output": {
+    "host": "127.0.0.1",
+    "ok": true,
+    "port": 3334,
+    "safe": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "host": "0.0.0.0",
+    "port": 3334
+  },
+  "output": {
+    "host": "0.0.0.0",
+    "ok": true,
+    "port": 3334,
+    "safe": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "host": "0.0.0.0",
+    "port": 99999
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid loopback bind config."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_loopback_bind_audit.test.js`.
