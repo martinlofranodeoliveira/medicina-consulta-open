@@ -2051,3 +2051,99 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_creation_instant_audit.test.js`.
+
+
+<!-- community-core:storage-snapshot-audit -->
+### Audit synthetic storage snapshot offline
+
+Helps local synthetic scheduling study by validating a fictional storage snapshot envelope offline without server or storage. It supports the documented versioned JSON recovery contract, complements UTC free-slot enumeration, appointment conflict checks, draft, catalog, status, window, day-filter, reschedule, capacity, deletion, duration, patient-reference, start-grid, identifier, query-gate, body-gate, host-gate, ordered-agenda, openapi-inventory, year-bounds, error-envelope, icalendar-export, IANA-day and creation-instant audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/storage_snapshot_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys version and appointments, exactly two entries. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. version must be a number that is a safe integer exactly 1 with no type coercion. appointments must be an array of 0..200 entries. Each entry must be a plain object with only keys id, practitionerId and status, exactly three entries. Null, array or non-object entry is invalid. Extra or missing keys make payload invalid. id must be a string length 1..64 containing only ASCII letters, digits, hyphen and underscore, checked character by character with for-of and Map get/set without indexed variable access. practitionerId must be a string length 6..64 starting with demo-, containing only ASCII letters, digits, hyphen and underscore, checked character by character with for-of and Map get/set without indexed variable access. status must be exactly scheduled, completed or cancelled, checked character by character with for-of and Map get/set without indexed variable access. Duplicate id values make payload invalid, tracked with Map get/set. Any wrong type, length, character, structure, duplicate, extra key or missing key makes payload invalid. On any invalid payload it returns {ok:false,error:{code:"validation_error",message:"invalid storage snapshot."}} with no partial result. Otherwise it returns {ok:true,count,snapshot} where count equals appointments length and snapshot is a new object with version number copy and appointments new array sorted lexicographically by id via deterministic comparison loop containing new objects with only id, practitionerId and status as new string copies built by concatenation. It never mutates input. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype/constructor access. Preserve input.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "b-001",
+        "practitionerId": "demo-cardio",
+        "status": "scheduled"
+      },
+      {
+        "id": "a-001",
+        "practitionerId": "demo-clinica-geral",
+        "status": "completed"
+      }
+    ],
+    "version": 1
+  },
+  "output": {
+    "count": 2,
+    "ok": true,
+    "snapshot": {
+      "appointments": [
+        {
+          "id": "a-001",
+          "practitionerId": "demo-clinica-geral",
+          "status": "completed"
+        },
+        {
+          "id": "b-001",
+          "practitionerId": "demo-cardio",
+          "status": "scheduled"
+        }
+      ],
+      "version": 1
+    }
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "x-1",
+        "practitionerId": "demo-cardio",
+        "status": "scheduled"
+      },
+      {
+        "id": "x-1",
+        "practitionerId": "demo-cardio",
+        "status": "scheduled"
+      }
+    ],
+    "version": 1
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid storage snapshot."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [],
+    "version": 2
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid storage snapshot."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_storage_snapshot_audit.test.js`.
