@@ -2431,3 +2431,69 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_loopback_bind_audit.test.js`.
+
+
+<!-- community-core:appointment-catalog-membership-audit -->
+### Audit appointment catalog membership offline
+
+Helps local synthetic scheduling study by checking fictional practitioner membership offline without server or storage. It encodes the documented demo- catalog reference and practitioner_not_found rule for clear learning material, complements UTC free-slot enumeration, conflict checks, catalog validation, draft, identifier and ordered agenda audits without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Application integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/appointment_catalog_membership_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys catalog and practitionerId, exactly two entries. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. catalog must be an array of 1..50 entries. Each entry must be a string length 6..64 starting with demo-, containing only ASCII letters, digits, hyphen and underscore, checked character by character with for-of and Map get/set without callbacks. practitionerId must be a string length 6..64 starting with demo-, containing only ASCII letters, digits, hyphen and underscore, checked character by character with for-of. Duplicate catalog ids by exact character-by-character comparison via Map, wrong types, or any id rule violation makes payload invalid. On any invalid payload it returns {ok:false,error:{code:validation_error,message:invalid catalog membership check.}} with no partial result. Otherwise it returns {ok:true,member,count} where member is true when practitionerId exactly equals one catalog entry and false otherwise, and count equals catalog length, preserving input without mutation. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without reassignment of function or builtin identifiers and without mutating input properties.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "catalog": [
+      "demo-cardio",
+      "demo-clinica-geral"
+    ],
+    "practitionerId": "demo-cardio"
+  },
+  "output": {
+    "count": 2,
+    "member": true,
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "catalog": [
+      "demo-cardio",
+      "demo-clinica-geral"
+    ],
+    "practitionerId": "demo-dieta"
+  },
+  "output": {
+    "count": 2,
+    "member": false,
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "catalog": [
+      "prod-cardio"
+    ],
+    "practitionerId": "prod-cardio"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid catalog membership check."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_appointment_catalog_membership_audit.test.js`.
