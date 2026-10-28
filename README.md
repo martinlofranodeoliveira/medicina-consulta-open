@@ -2557,3 +2557,61 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_server_lock_gate_audit.test.js`.
+
+
+<!-- community-core:error-status-mapping-audit -->
+### Validate synthetic error code to HTTP status mapping offline
+
+Helps local synthetic scheduling study by validating fictional error code to HTTP status pairing offline without server or storage. It clarifies the documented 400/404/409/413/415 mapping, complements envelope-shape and host/body gate checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority.
+
+Reusable deterministic JSON core: `src/community/error_status_mapping_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys code and status. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. code must be a string exactly one of validation_error, practitioner_not_found, appointment_not_found, schedule_conflict, invalid_transition, body_too_large, json_required, checked with for-of and Map get and set without callbacks. status must be a finite safe integer exactly one of 400, 404, 409, 413, 415 with no fraction. Wrong types or unknown values make payload invalid. This check validates only synthetic code to status pairing for seven documented pairs validation_error to 400, practitioner_not_found to 404, appointment_not_found to 404, schedule_conflict to 409, invalid_transition to 409, body_too_large to 413, json_required to 415. It does not check message text, envelope shape, practitioner catalog, patientRef, duration grid, start grid, year bounds, ordering, filtering, overlap, OpenAPI structure, server binding or storage, leaving those to specialized checks. Pairing is resolved with Map get and set without callbacks and mismatched code and status makes payload invalid. On any invalid payload it returns ok false with error code validation_error and message invalid error status mapping. with no partial data. Otherwise it returns ok true with code and status with canonical sorted keys, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get and set, using for-of and Object entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested, application and UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "code": "schedule_conflict",
+    "status": 409
+  },
+  "output": {
+    "code": "schedule_conflict",
+    "ok": true,
+    "status": 409
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "code": "validation_error",
+    "status": 400
+  },
+  "output": {
+    "code": "validation_error",
+    "ok": true,
+    "status": 400
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "code": "schedule_conflict",
+    "status": 400
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid error status mapping."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_error_status_mapping_audit.test.js`.
