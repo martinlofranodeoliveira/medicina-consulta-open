@@ -2615,3 +2615,62 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_error_status_mapping_audit.test.js`.
+
+
+<!-- community-core:appointment-success-envelope-audit -->
+### Validate synthetic appointment success envelope offline
+
+Helps local synthetic scheduling study by validating fictional appointment success envelopes offline without server or storage. It clarifies the documented 201 data.id chaining contract versus error envelopes, complements envelope-shape and identifier checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority.
+
+Reusable deterministic JSON core: `src/community/appointment_success_envelope_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key data. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. data must be a plain object; null, array or non-object data is invalid. data must contain required key id checked with for-of and Object.entries and Map get and set without callbacks. id must be a string length 1..128 with no LF, CR or TAB and no leading or trailing ASCII space. Empty, overlong, wrong-type or missing id makes payload invalid. Other keys inside data are allowed without validation to avoid duplicating appointment semantics. This check validates only synthetic success-envelope shape for data.id chaining; it does not check error envelope shape, error code to status pairing, strict identifier pattern, practitioner catalog, patientRef, duration grid, start grid, year bounds, ordering, filtering, overlap, OpenAPI structure, server binding or storage, leaving those to specialized checks. On any invalid payload it returns ok false with error code validation_error and message invalid success envelope. with no partial data. Otherwise it returns ok true with id with canonical sorted keys, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get and set, using for-of and Object entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested, application and UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "data": {
+      "id": "550e8400-e29b-41d4-a716-446655440000"
+    }
+  },
+  "output": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "data": {
+      "extra": 12,
+      "id": "synthetic_001",
+      "status": "scheduled"
+    }
+  },
+  "output": {
+    "id": "synthetic_001",
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "data": {}
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid success envelope."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_appointment_success_envelope_audit.test.js`.
