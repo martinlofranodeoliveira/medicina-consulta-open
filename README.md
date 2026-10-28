@@ -2497,3 +2497,63 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_appointment_catalog_membership_audit.test.js`.
+
+
+<!-- community-core:server-lock-gate-audit -->
+### Validate synthetic local server lock contention offline
+
+Helps local synthetic scheduling study by validating fictional exclusive single-instance lock contention offline without server or storage. It supports the README single instance per DATA_DIR rule with PID check in .server.lock, complements storage snapshot and loopback bind checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority.
+
+Reusable deterministic JSON core: `src/community/server_lock_gate_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys currentPid and requestPid. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. currentPid and requestPid must each be a finite safe number integer exactly in range 1..2147483647 with no fraction, NaN, Infinity, zero, negative or over-max allowed, checked without Date and without callbacks. Wrong types, non-integers or out-of-range make payload invalid. This check validates only synthetic exclusive single-instance lock contention for one local data folder; it does not check practitioner catalog, patientRef, duration grid, start grid, UTC year bounds, ordering, filtering, overlap, OpenAPI structure, server binding, storage snapshot content or body limits, leaving those to specialized checks. On any invalid payload it returns {ok:false,error:{code:validation_error,message:invalid server lock.}} with no partial data. Otherwise it compares the two pids with strict equality without callbacks: equal pids mean same holder may retain the folder, different pids mean another holder blocks start. It returns {ok:true,canStart,currentPid,requestPid} where canStart is true when equal and false otherwise, with canonical sorted keys, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested; application and UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "currentPid": 1234,
+    "requestPid": 1234
+  },
+  "output": {
+    "canStart": true,
+    "currentPid": 1234,
+    "ok": true,
+    "requestPid": 1234
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "currentPid": 1234,
+    "requestPid": 5678
+  },
+  "output": {
+    "canStart": false,
+    "currentPid": 1234,
+    "ok": true,
+    "requestPid": 5678
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "currentPid": 0,
+    "requestPid": 1234
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid server lock."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_server_lock_gate_audit.test.js`.
