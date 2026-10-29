@@ -2674,3 +2674,63 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_appointment_success_envelope_audit.test.js`.
+
+
+<!-- community-core:appointment-end-instant-audit -->
+### Validate synthetic appointment end instant offline
+
+Helps local synthetic scheduling study by computing fictional appointment end instant offline without server or storage. It supports src/appointments.js interval end logic and UTC free-slot enumeration for a caller-filtered professional, complements start grid, duration grid, UTC year bounds, window validation and single-pair conflict checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority.
+
+Reusable deterministic JSON core: `src/community/appointment_end_instant_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys startsAt and durationMinutes. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. startsAt must be a string length 24 of exact form YYYY-MM-DDTHH:MM:SS.sssZ with literal separators, checked character by character with for-of and Map get/set without callbacks. Year 0000 to 9999, month 01 to 12, day valid for month including leap year divisible by 400 or by 4 except 100 including year 0000 as leap, hour 00 to 23, minute exactly 00 or 15 or 30 or 45, second 00 and millisecond 000. durationMinutes must be a finite safe integer 15 to 120 step 15 with no fraction. Wrong types or out-of-range values make payload invalid. This check computes only the synthetic appointment end instant for offline study; it does not check practitioner catalog, patientRef, ordering, filtering, overlap messaging, reschedule identity, status transitions, OpenAPI structure, server binding, storage snapshot or body limits, leaving those to specialized checks. Manual calendar arithmetic without Date adds durationMinutes to startsAt across minute, hour, day, month and year with leap handling; any end that overflows year beyond 9999 makes payload invalid. On any invalid payload it returns {ok:false,error:{code:validation_error,message:invalid appointment interval.}} with no partial data. Otherwise it returns {ok:true,startsAt,durationMinutes,endsAt} with canonical sorted keys, where endsAt is a new UTC grid string length 24 in the same exact form, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested; application and UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "durationMinutes": 30,
+    "startsAt": "2030-04-08T12:00:00.000Z"
+  },
+  "output": {
+    "durationMinutes": 30,
+    "endsAt": "2030-04-08T12:30:00.000Z",
+    "ok": true,
+    "startsAt": "2030-04-08T12:00:00.000Z"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "durationMinutes": 30,
+    "startsAt": "2030-01-31T23:45:00.000Z"
+  },
+  "output": {
+    "durationMinutes": 30,
+    "endsAt": "2030-02-01T00:15:00.000Z",
+    "ok": true,
+    "startsAt": "2030-01-31T23:45:00.000Z"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "durationMinutes": 30,
+    "startsAt": "2030-04-08T12:07:00.000Z"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid appointment interval."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_appointment_end_instant_audit.test.js`.
