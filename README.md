@@ -2794,3 +2794,79 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_past_instant_allowance_audit.test.js`.
+
+
+<!-- community-core:practitioner-scoped-slot-gate-audit -->
+### Validate practitioner-scoped slot input offline
+
+Helps local synthetic scheduling study by validating practitioner-scoped free-slot input offline without server or storage. It enforces the documented caller-filtered precondition for UTC free-slot enumeration that the input list already belongs to one fictional professional, complements availability window enumeration plus catalog membership and conflict checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority.
+
+Reusable deterministic JSON core: `src/community/practitioner_scoped_slot_gate_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys appointments and practitionerId. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. practitionerId must be a string length 6..64 starting with demo- containing only ASCII letters, digits, hyphen and underscore, checked character by character with for-of and Map get/set without callbacks. appointments must be an array length 0..50. Each entry must be a plain object with required practitionerId string; other keys when present are ignored and not validated. Missing practitionerId, non-string practitionerId, or any entry practitionerId not exactly equal character by character to the requested practitionerId makes payload invalid. No duration grid, start grid, year bounds, calendar validity, patient reference, catalog shape, membership existence, ordering, UTC day filtering, IANA query, overlap, free-slot enumeration, reschedule identity or request, status vocabulary, transition, deletion, OpenAPI inventory, server info or health, loopback binding, host gate, storage snapshot or version, lock, body limit, or error envelope checks are performed here, leaving those to specialized checks. On any invalid payload it returns {ok:false,error:{code:validation_error,message:invalid practitioner-filtered slot input.}} with no partial data. Otherwise it returns {ok:true,count,practitionerId} with canonical sorted keys where count equals appointments length and practitionerId copies input, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested; application and UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "practitionerId": "demo-cardio",
+        "status": "scheduled"
+      },
+      {
+        "practitionerId": "demo-cardio",
+        "status": "completed"
+      }
+    ],
+    "practitionerId": "demo-cardio"
+  },
+  "output": {
+    "count": 2,
+    "ok": true,
+    "practitionerId": "demo-cardio"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "practitionerId": "demo-cardio"
+      },
+      {
+        "practitionerId": "demo-clinica-geral"
+      }
+    ],
+    "practitionerId": "demo-cardio"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid practitioner-filtered slot input."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [],
+    "practitionerId": "prod-cardio"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid practitioner-filtered slot input."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_practitioner_scoped_slot_gate_audit.test.js`.
