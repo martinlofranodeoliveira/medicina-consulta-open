@@ -2734,3 +2734,63 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_appointment_end_instant_audit.test.js`.
+
+
+<!-- community-core:past-instant-allowance-audit -->
+### Validate synthetic past instant allowance offline
+
+Helps local synthetic scheduling study by confirming fictional past instants stay acceptable offline without server or storage. It supports README past-dates-accepted facilitation for examples, complements start-grid, year-bounds, end-instant and conflict checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority.
+
+Reusable deterministic JSON core: `src/community/past_instant_allowance_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys nowUtc and startsAt. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. nowUtc and startsAt must each be strings length 24 of exact form YYYY-MM-DDTHH:MM:SS.000Z with literal separators, millisecond 000, second 00, minute 00 or 15 or 30 or 45, hour 00 to 23, year 0000 to 9999, month 01 to 12, day valid for month including leap year divisible by 400 or by 4 except 100 including year 0000 as leap, checked character by character with for-of and Map get and set without callbacks. Wrong types, bad lengths, bad characters or out-of-range values make payload invalid. This check covers only synthetic past-instant allowance for offline study; it does not check practitioner catalog, patientRef, duration grid, ordering, filtering, overlap, free slots, reschedule identity fields, status transitions, OpenAPI structure, server binding, storage snapshot or body limits, leaving those to specialized checks. On any invalid payload it returns {ok:false,error:{code:validation_error,message:invalid past allowance claim.}} with no partial data. Otherwise it returns {ok:true,nowUtc,startsAt,isPast} with canonical sorted keys, where nowUtc and startsAt copy input and isPast is true when startsAt is strictly earlier than nowUtc by fixed-width lexicographic comparison else false, preserving input without mutation. Past true remains ok true to prove past dates are accepted for examples. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get and set, using for-of and Object.entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested; application and UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "nowUtc": "2030-04-08T12:00:00.000Z",
+    "startsAt": "2030-04-08T11:00:00.000Z"
+  },
+  "output": {
+    "isPast": true,
+    "nowUtc": "2030-04-08T12:00:00.000Z",
+    "ok": true,
+    "startsAt": "2030-04-08T11:00:00.000Z"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "nowUtc": "2030-04-08T11:00:00.000Z",
+    "startsAt": "2030-04-08T12:00:00.000Z"
+  },
+  "output": {
+    "isPast": false,
+    "nowUtc": "2030-04-08T11:00:00.000Z",
+    "ok": true,
+    "startsAt": "2030-04-08T12:00:00.000Z"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "nowUtc": "2030-04-08T12:00:00.000Z",
+    "startsAt": "2030-04-08T12:07:00.000Z"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid past allowance claim."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_past_instant_allowance_audit.test.js`.
