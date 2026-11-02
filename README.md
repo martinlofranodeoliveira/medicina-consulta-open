@@ -2870,3 +2870,71 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_practitioner_scoped_slot_gate_audit.test.js`.
+
+
+<!-- community-core:appointment-occupancy-gate-audit -->
+### Validate synthetic appointment occupancy offline
+
+Helps local synthetic scheduling study by mapping fictional appointment status to interval occupancy offline without server or storage. It encodes the documented rule that cancellation frees the interval while scheduled and completed keep it occupied, complements status vocabulary plus transition, conflict and availability-window checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority.
+
+Reusable deterministic JSON core: `src/community/appointment_occupancy_gate_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key status. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. status must be a string exactly scheduled, completed or cancelled, checked character by character with for-of and Map get and set without callbacks. Wrong types or other values make payload invalid. This check covers only synthetic occupancy retention for offline study: cancelled frees the interval with occupied false while scheduled and completed keep the interval occupied with occupied true, matching README cancellation and completion retention and availableSlots cancelled-ignored rule and store conflict filter status not cancelled. It does not check practitioner catalog shape, membership existence, patientRef, start grid, year bounds, calendar validity, UTC normalization, duration grid, end instant, ordering, UTC day filtering, IANA query, overlap geometry, free-slot enumeration, reschedule identity or request, status request body shape, transition lifecycle, deletion, OpenAPI inventory, server info or health, loopback binding, host gate, storage snapshot or version, lock, body limit, or error envelope, leaving those to specialized checks. On any invalid payload it returns ok false with error code validation_error and message invalid appointment occupancy. with no partial data. Otherwise it returns ok true with occupied and status with canonical sorted keys where occupied is true for scheduled and completed and false for cancelled and status copies input, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get and set, using for-of and Object entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested; application and UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "status": "scheduled"
+  },
+  "output": {
+    "occupied": true,
+    "ok": true,
+    "status": "scheduled"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "status": "completed"
+  },
+  "output": {
+    "occupied": true,
+    "ok": true,
+    "status": "completed"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "status": "cancelled"
+  },
+  "output": {
+    "occupied": false,
+    "ok": true,
+    "status": "cancelled"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "status": "done"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid appointment occupancy."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_appointment_occupancy_gate_audit.test.js`.
