@@ -3086,3 +3086,56 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_accessible_agenda_field_audit.test.js`.
+
+
+<!-- community-core:utc-calendar-date-audit -->
+### Validate synthetic UTC calendar dates offline
+
+Helps local synthetic scheduling study by validating YYYY-MM-DD calendar existence offline without server or storage. It supports README UTC-day date filter and startsAt calendar-validity rule, complements UTC-day filtering, year-bounds and start-grid checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority; application/UI integration is outside this change.
+
+Reusable deterministic JSON core: `src/community/utc_calendar_date_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key date. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. date must be a string of exactly 10 characters in shape YYYY-MM-DD with hyphens at the two separator positions, checked character by character with for-of and Map get/set without callbacks. Year must be 0000..9999, month 01..12, day valid for month including leap February: February has 29 days only in leap years defined as divisible by 4 except centuries unless divisible by 400 with year 0000 leap, otherwise 28; April, June, September and November have 30 days; remaining months 31. Wrong length, wrong shape, non-digit, month or day out of range or non-leap February 29 makes payload invalid. This covers only date-only calendar existence for offline synthetic study; it does not check practitioner catalog shape or membership, patientRef syntax, startsAt offset shape or grid, UTC normalization, duration grid, end instant, agenda ordering, UTC-day prefix filtering, IANA query, overlap geometry, free-slot enumeration, reschedule identity or request body, status vocabulary or transitions, deletion, OpenAPI inventory, server info or health, loopback binding, host gate, storage snapshot or version or lock, body limit, creation instant, identifier or success envelope, or error mapping, leaving those to specialized checks. On any invalid payload it returns {ok:false,error:{code:validation_error,message:invalid calendar date.}} with no partial data. Otherwise it returns {ok:true,date} with canonical sorted keys where date copies the input string, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get/set, using for-of and Object.entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested; application/UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "date": "2030-04-08"
+  },
+  "output": {
+    "date": "2030-04-08",
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "date": "2032-02-29"
+  },
+  "output": {
+    "date": "2032-02-29",
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "date": "2023-02-29"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid calendar date."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_utc_calendar_date_audit.test.js`.
