@@ -3192,3 +3192,106 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_startsat_utc_normalization_audit.test.js`.
+
+
+<!-- community-core:agenda-link-index-audit -->
+### Validate synthetic practitioner-appointment link index offline
+
+Helps local synthetic scheduling study by validating practitioner-appointment link integrity offline without server or storage. It supports the roadmap item for validated catalog separation, complements single-catalog and single-membership checks with batch referential integrity and sorted link index, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority.
+
+Reusable deterministic JSON core: `src/community/agenda_link_index_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only keys practitioners and appointments. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. practitioners must be an array of 1..20 entries; non-array, empty or longer makes payload invalid. Each practitioner entry must be a string length 6..64 starting with demo- containing only ASCII letters, digits, hyphen and underscore, checked character by character with for-of and Map get and set without callbacks. appointments must be an array of 0..50 entries; non-array or longer makes payload invalid. Each appointment must be a plain object with only keys id and practitionerId. Extra, missing or wrong-typed entries make payload invalid. Each id must be a string length 1..64 containing only ASCII letters, digits, hyphen and underscore, checked character by character with for-of and Map get and set without callbacks. Each practitionerId must satisfy the same demo- id shape. Duplicate practitioner entries make payload invalid. Duplicate appointment ids make payload invalid, tracked with Map get and set without callbacks. Every appointment practitionerId must equal one listed practitioner entry; unknown link makes payload invalid, compared with for-of character equality without callbacks. Lexicographic ordering uses for-of character comparison without callbacks. This covers only synthetic entity-link referential integrity for offline synthetic study; it does not check practitioner name or specialty, patientRef syntax, startsAt offset shape or grid, UTC normalization, calendar validity, year bounds, duration grid, end instant arithmetic, agenda ordering, UTC-day prefix filtering, IANA query, overlap geometry, free-slot enumeration, availability window or blackout containment, reschedule identity or request body, status vocabulary or transitions, deletion, OpenAPI inventory, server info or health, loopback binding, host gate, storage snapshot or version or lock, body limit, creation instant, identifier UUID shape, success envelope, or error mapping, leaving those to specialized checks. On any invalid payload it returns ok false with error code validation_error and message invalid agenda link index. with no partial data. Otherwise it returns ok true with count and links with canonical sorted keys where count equals appointments length and links is a new array sorted lexicographically by practitionerId containing one entry per practitioner with only practitionerId and appointmentIds where appointmentIds is a new array sorted lexicographically containing linked ids, including empty arrays for practitioners without appointments, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get and set, using for-of and Object.entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested; application and UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "appt_01",
+        "practitionerId": "demo-clinica-geral"
+      },
+      {
+        "id": "appt_02",
+        "practitionerId": "demo-cardio"
+      }
+    ],
+    "practitioners": [
+      "demo-cardio",
+      "demo-clinica-geral"
+    ]
+  },
+  "output": {
+    "count": 2,
+    "links": [
+      {
+        "appointmentIds": [
+          "appt_02"
+        ],
+        "practitionerId": "demo-cardio"
+      },
+      {
+        "appointmentIds": [
+          "appt_01"
+        ],
+        "practitionerId": "demo-clinica-geral"
+      }
+    ],
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "appt_01",
+        "practitionerId": "demo-outro"
+      }
+    ],
+    "practitioners": [
+      "demo-cardio"
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid agenda link index."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "appointments": [
+      {
+        "id": "appt_01",
+        "practitionerId": "demo-cardio"
+      },
+      {
+        "id": "appt_01",
+        "practitionerId": "demo-cardio"
+      }
+    ],
+    "practitioners": [
+      "demo-cardio"
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid agenda link index."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_agenda_link_index_audit.test.js`.
