@@ -2991,3 +2991,98 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_appointment_status_request_audit.test.js`.
+
+
+<!-- community-core:accessible-agenda-field-audit -->
+### Validate synthetic accessible agenda field descriptors offline
+
+Helps local synthetic scheduling study by validating accessible field descriptors for demo agenda forms offline without server or storage. It supports ROADMAP accessible interface item, complements creation-draft, status-request, catalog and conflict checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority.
+
+Reusable deterministic JSON core: `src/community/accessible_agenda_field_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key fields as array of 1 to 6 entries. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. Each entry must be a plain object with only keys key, label and required. Extra, missing or wrong-typed entries make payload invalid. key must be a string exactly one of date, durationMinutes, patientRef, practitionerId, startsAt, status, checked character by character with for-of and Map get and set without callbacks, matching README creation, reschedule, status-change and list-filter field names. Wrong types or other values make payload invalid. label must be a string length 2 to 80 without leading or trailing space and without TAB, LF or CR, checked character by character with for-of. Wrong types or other values make payload invalid. required must be a boolean true or false. Wrong types make payload invalid. Duplicate key values make payload invalid. This check covers only synthetic accessible descriptor shape for offline study supporting ROADMAP accessible interface item; it does not check practitioner catalog shape or membership, patientRef syntax, start grid, year bounds, calendar validity, UTC normalization, duration grid, end instant, ordering, UTC-day filtering, IANA query, overlap geometry, free-slot enumeration, reschedule identity or request body, status vocabulary or transitions, deletion, OpenAPI inventory, server info or health, loopback binding, host gate, storage snapshot or version or lock, body limit, or error mapping, leaving those to specialized checks. On any invalid payload it returns ok false with error code validation_error and message invalid accessible field list. with no partial data. Otherwise it returns ok true with count plus fields with canonical sorted keys where count equals input length and fields is a new array sorted lexicographically by key containing copies with only key, label and required, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get and set, using for-of and Object entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested; application and UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "fields": [
+      {
+        "key": "startsAt",
+        "label": "Start time",
+        "required": true
+      },
+      {
+        "key": "practitionerId",
+        "label": "Practitioner",
+        "required": true
+      }
+    ]
+  },
+  "output": {
+    "count": 2,
+    "fields": [
+      {
+        "key": "practitionerId",
+        "label": "Practitioner",
+        "required": true
+      },
+      {
+        "key": "startsAt",
+        "label": "Start time",
+        "required": true
+      }
+    ],
+    "ok": true
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "fields": [
+      {
+        "key": "startsAt",
+        "required": true
+      }
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid accessible field list."
+    },
+    "ok": false
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "fields": [
+      {
+        "key": "date",
+        "label": "Day filter",
+        "required": false
+      },
+      {
+        "key": "date",
+        "label": "Day filter",
+        "required": false
+      }
+    ]
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid accessible field list."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_accessible_agenda_field_audit.test.js`.
