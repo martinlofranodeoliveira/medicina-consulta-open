@@ -3139,3 +3139,56 @@ Examples (JSON input and expected output):
 ```
 
 Public regression tests: `test/community_utc_calendar_date_audit.test.js`.
+
+
+<!-- community-core:startsat-utc-normalization-audit -->
+### Validate synthetic startsAt UTC normalization offline
+
+Helps local synthetic scheduling study by normalizing offset startsAt strings to canonical UTC instants offline without server or storage. It supports the README UTC-storage example and explicit-offset rule, complements start-grid, year-bounds, calendar-date, duration-grid and end-instant checks without duplicating them, and gives demos and tests a deterministic pure JSON core with no network or persistence. Synthetic data only with no medical authority.
+
+Reusable deterministic JSON core: `src/community/startsat_utc_normalization_audit.mjs`, API `runFeature(payload)`. This module is independently tested; application/UI integration is outside this change.
+
+runFeature(payload) is a pure deterministic synchronous JSON-to-JSON function with no IO, env, clock, randomness, callbacks, or dependencies and no Date use. It is a pure ES module exporting function runFeature(payload) without imports, classes, async, this, reflection, or mutable module variables. Input payload must be a plain object with only key startsAt. Null, array or non-object payload is invalid. Extra or missing keys make payload invalid. startsAt must be a string of exactly 20 characters ending with Z or 25 characters ending with offset, shaped YYYY-MM-DDTHH:MM:SS plus Z or plus-minus HH:MM, with hyphens, T and colons at fixed positions, checked character by character with for-of and Map get and set without callbacks. Year must be 0000 to 9999, month 01 to 12, day valid for month including leap February defined as divisible by 4 except centuries unless divisible by 400 with year 0000 leap, hour 00 to 23, minute 00 or 15 or 30 or 45, second 00. Offset must be Z or sign plus hour 00 to 14 with minute 00 or 15 or 30 or 45; non-grid offset minutes make payload invalid. This covers only offset-to-UTC normalization geometry for offline synthetic study; it does not check practitioner catalog shape or membership, patientRef syntax, duration grid, end-instant addition, agenda ordering, UTC-day filtering, IANA query, overlap geometry, free-slot enumeration, reschedule identity or request body, status vocabulary or transitions, deletion, OpenAPI inventory, server info or health, loopback binding, host gate, storage snapshot or version or lock, body limit, creation instant, identifier or success envelope, or error mapping, leaving those to specialized checks. On any invalid payload it returns ok false with error code validation_error and message invalid startsAt with no partial data. Otherwise it subtracts the offset from wall time with manual day-month-year carry and borrow using month lengths and leap rules, rejects results moving UTC year outside 0000 to 9999, requires normalized UTC minute on 00 or 15 or 30 or 45 with zero seconds, and returns ok true with utc shaped YYYY-MM-DDTHH:MM:00.000Z with canonical sorted keys, preserving input without mutation. Ordering is canonical sorted. It builds results with object literals, arrays with push and Map get and set, using for-of and Object.entries without indexed variable access except literal nonnegative indices. No reassignment of function or builtin identifiers, no property assignment or update or delete and no Object assign or create. Builtins are not aliased or passed as callbacks and computed access uses only literal nonnegative indices. No prototype or constructor access. Preserve input without mutating input properties. This module is independently tested; application and UI integration is outside this change. Synthetic data only with no medical authority.
+
+Examples (JSON input and expected output):
+
+```json
+{
+  "input": {
+    "startsAt": "2030-04-08T09:00:00-03:00"
+  },
+  "output": {
+    "ok": true,
+    "utc": "2030-04-08T12:00:00.000Z"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "startsAt": "2030-04-08T12:00:00Z"
+  },
+  "output": {
+    "ok": true,
+    "utc": "2030-04-08T12:00:00.000Z"
+  }
+}
+```
+
+```json
+{
+  "input": {
+    "startsAt": "2030-04-08T09:00:00+03:07"
+  },
+  "output": {
+    "error": {
+      "code": "validation_error",
+      "message": "invalid startsAt."
+    },
+    "ok": false
+  }
+}
+```
+
+Public regression tests: `test/community_startsat_utc_normalization_audit.test.js`.
